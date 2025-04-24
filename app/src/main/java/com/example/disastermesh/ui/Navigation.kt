@@ -24,9 +24,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.disastermesh.feature.ble.BleConnectScreen
 import com.example.disastermesh.feature.disastermessage.ui.DisasterMessageScreen
 import com.example.disastermesh.feature.ble.BleScanScreen
 
@@ -52,10 +55,18 @@ fun MainNavigation() {
         composable("bleScan") {
             //TODO: BleScanScreen required version >= 31 min version is 23 in project
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                BleScanScreen(modifier = Modifier.padding(16.dp))
+                BleScanScreen(modifier = Modifier.padding(16.dp), navController = navController)
             } else {
                 Text("BLE scanning requires Android 12+")
             }
+        }
+
+        composable(
+            "bleConnect/{address}",
+            arguments = listOf(navArgument("address") { type = NavType.StringType })
+        ) { backStack ->
+            val addr = backStack.arguments!!.getString("address")!!
+            BleConnectScreen(address = addr)
         }
     }
 }

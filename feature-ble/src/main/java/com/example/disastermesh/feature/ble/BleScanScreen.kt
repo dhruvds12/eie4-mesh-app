@@ -3,6 +3,7 @@ package com.example.disastermesh.feature.ble
 import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
@@ -27,7 +29,8 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 @Composable
 fun BleScanScreen(
     modifier: Modifier = Modifier,
-    viewModel: BleScanViewModel = hiltViewModel()
+    viewModel: BleScanViewModel = hiltViewModel(),
+    navController: NavHostController
 ) {
     // 1) Request runtime permissions:
     val permissions = listOf(
@@ -55,7 +58,9 @@ fun BleScanScreen(
 
     LazyColumn(modifier = modifier.fillMaxSize()) {
         items(devices) { device ->
-            Column(Modifier.padding(16.dp)) {
+            Column(modifier
+                .padding(16.dp)
+                .clickable { navController.navigate("bleConnect/${device.address}")}) {
                 Text(
                     text = device.name ?: "Unknown device",
                     fontWeight = FontWeight.Bold

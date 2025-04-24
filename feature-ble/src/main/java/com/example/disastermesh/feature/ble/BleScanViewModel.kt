@@ -13,7 +13,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BleScanViewModel @Inject constructor(
-    private val bleScanner: BleScanner
+    bleScanner: BleScanner
 ) : ViewModel() {
 
     /** Exposed as a cold Flow so UI can collectLatest. */
