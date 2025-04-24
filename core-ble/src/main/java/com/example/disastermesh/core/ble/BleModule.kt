@@ -16,4 +16,5 @@ Hilt is a dependency injection library that simplifies the process of providing 
 abstract class BleModule{
     @Binds abstract fun bindScanner(impl: AndroidBleScanner): BleScanner
     @Binds abstract  fun bindGattManager(impl: AndroidGattManager): GattManager
+    @Binds abstract fun bindMeshRepo(impl: BleMeshRepository):    MeshRepository
 }

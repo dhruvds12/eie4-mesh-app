@@ -29,6 +29,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.disastermesh.feature.ble.BleChatScreen
 import com.example.disastermesh.feature.ble.BleConnectScreen
 import com.example.disastermesh.feature.disastermessage.ui.DisasterMessageScreen
 import com.example.disastermesh.feature.ble.BleScanScreen
@@ -66,7 +67,21 @@ fun MainNavigation() {
             arguments = listOf(navArgument("address") { type = NavType.StringType })
         ) { backStack ->
             val addr = backStack.arguments!!.getString("address")!!
-            BleConnectScreen(address = addr)
+            BleConnectScreen(address = addr,
+                navController = navController)
+        }
+
+        composable(
+            "bleChat/{address}",
+            arguments = listOf(navArgument("address") {
+                type = NavType.StringType
+            })
+        ) { backStack ->
+            val address = backStack.arguments!!.getString("address")!!
+            BleChatScreen(
+                address = address,
+                navController = navController
+            )
         }
     }
 }

@@ -4,11 +4,15 @@ import android.Manifest
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,19 +58,22 @@ fun BleScanScreen(
     }
 
     // 3) Once granted, collect list of devices:
-    val devices by viewModel.devices.collectAsState()
+    val devices by viewModel.devices.collectAsState(initial = emptyList())
 
-    LazyColumn(modifier = modifier.fillMaxSize()) {
+    LazyColumn(modifier = modifier) {
         items(devices) { device ->
-            Column(modifier
-                .padding(16.dp)
-                .clickable { navController.navigate("bleConnect/${device.address}")}) {
-                Text(
-                    text = device.name ?: "Unknown device",
-                    fontWeight = FontWeight.Bold
-                )
-                Text(text = device.address)
-                Text(text = "RSSI: ${device.rssi}")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .clickable {
+                        navController.navigate("bleConnect/${device.address}")
+                    },
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(device.name ?: "Unknown", fontWeight = FontWeight.Bold)
+                Text(device.address)
+                Text("RSSI: ${device.rssi}")
             }
             HorizontalDivider()
         }
