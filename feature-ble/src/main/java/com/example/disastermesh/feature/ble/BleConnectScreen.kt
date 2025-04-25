@@ -13,81 +13,89 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.disastermesh.core.ble.GattConnectionEvent
 
-
 @Composable
 fun BleConnectScreen(
     address: String,
     navController: NavController,
     viewModel: BleConnectViewModel = hiltViewModel()
 ) {
-    // 1) Collect the connection state (nullable until it emits)
-    val state by viewModel.connectionState
-        .collectAsState(initial = null)
+    /* ------------------------------------------------------------------ */
+    /*  state                                                             */
+    /* ------------------------------------------------------------------ */
 
-    // 2) Build up a local list of messages
-    val messages = remember { mutableStateListOf<String>() }
-    LaunchedEffect(Unit) {
-        viewModel.incomingText.collect { msg ->
-            messages += msg
-        }
-    }
+    val state by viewModel.connectionState.collectAsState()
+    val chat  by viewModel.chat.collectAsState()
 
     var draft by remember { mutableStateOf("") }
 
-    // Kick off the GATT connect when we land here
-    LaunchedEffect(address) {
-        viewModel.connect(address)
-    }
+    /* start connecting once when we enter the screen */
+    LaunchedEffect(address) { viewModel.connect(address) }
 
-    Column(Modifier.padding(16.dp).fillMaxSize()) {
-        // Show status / chat area
-        when (val e = state) {
-            GattConnectionEvent.Connecting     -> Text("🔄 Connecting…")
-            GattConnectionEvent.Connected      -> Text("✅ Connected! waiting for services…")
-            GattConnectionEvent.ServicesDiscovered -> {
-                Text("✅ Services discovered!")
-                Spacer(Modifier.height(8.dp))
+    /* ------------------------------------------------------------------ */
+    /*  UI                                                                 */
+    /* ------------------------------------------------------------------ */
 
-                // 3) Display the chat history
-                LazyColumn(Modifier.weight(1f)) {
-                    items(messages) { msg ->
-                        Text(msg, modifier = Modifier.padding(4.dp))
-                    }
-                }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        /* top status line */
+        StatusLine(state)
 
-                Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(8.dp))
 
-                // 4) Input + send
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextField(
-                        value = draft,
-                        onValueChange = { draft = it },
-                        modifier = Modifier.weight(1f)
-                    )
-                    Button(onClick = {
-                        viewModel.send(draft)
-                        draft = ""
-                    }) {
-                        Text("Send")
-                    }
+        /* chat window — visible once services have been discovered
+           and *stays* visible for every later event such as WriteCompleted */
+        val readyForChat = when (state) {
+            GattConnectionEvent.ServicesDiscovered     -> true
+            is GattConnectionEvent.WriteCompleted      -> true
+            is GattConnectionEvent.CharacteristicRead  -> true
+            else                                       -> false
+        }
+
+        if (readyForChat) {
+            LazyColumn(Modifier.weight(1f)) {
+                items(chat) { msg ->
+                    val prefix = if (msg.fromMe) "Me: " else "Node: "
+                    Text(prefix + msg.text, modifier = Modifier.padding(4.dp))
                 }
             }
-            GattConnectionEvent.Disconnected -> Text("⚠️ Disconnected")
-            is GattConnectionEvent.CharacteristicRead -> {
-                // ignore
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                TextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    modifier = Modifier.weight(1f),
+                    placeholder = { Text("Type a message…") }
+                )
+                Button(onClick = {
+                    viewModel.send(draft)
+                    draft = ""
+                }) { Text("Send") }
             }
-            is GattConnectionEvent.WriteCompleted -> {
-                // ignore
-            }
-            is GattConnectionEvent.Error -> Text("❌ Error: ${e.reason}")
-            null -> Text("Waiting to connect…")
         }
 
         Spacer(Modifier.height(16.dp))
 
-        // Always allow disconnect
-        Button(onClick = { viewModel.disconnect() }, modifier = Modifier.fillMaxWidth()) {
-            Text("Disconnect")
-        }
+        Button(
+            onClick = { viewModel.disconnect() },
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Disconnect") }
     }
+}
+
+@Composable
+private fun StatusLine(state: GattConnectionEvent?) = when (state) {
+    GattConnectionEvent.Connecting      -> Text("🔄 Connecting…")
+    GattConnectionEvent.Connected       -> Text("✅ Connected – discovering services…")
+    GattConnectionEvent.ServicesDiscovered -> Text("✅ Ready – chat below")
+    GattConnectionEvent.Disconnected    -> Text("⚠️ Disconnected")
+    is GattConnectionEvent.Error        -> Text("❌ Error: ${state.reason}")
+    else                                -> Text("Waiting…")
 }

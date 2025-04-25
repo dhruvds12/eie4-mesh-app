@@ -21,6 +21,10 @@ class BleMeshRepository @Inject constructor(
         gatt.sendMessage(text.toByteArray(Charsets.UTF_8))
     }
     override fun incomingText(): Flow<String> =
-        gatt.incomingMessages()
-            .map { bytes -> String(bytes, Charsets.UTF_8) }
+        gatt.incomingMessages().map { bytes ->
+            runCatching { String(bytes, Charsets.UTF_8) }.getOrElse {
+                bytes.joinToString(" ") { "%02X".format(it) }
+            }
+        }
+
 }
