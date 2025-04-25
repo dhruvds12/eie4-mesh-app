@@ -72,6 +72,7 @@ class AndroidGattManager @Inject constructor(
                 val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
                     g.writeDescriptor(cccd!!, enable) == SUCCESS
                 else {
+                    // Likely failed as API < 33, try old API
                     cccd!!.value = enable
                     g.writeDescriptor(cccd!!)
                 }
@@ -88,9 +89,10 @@ class AndroidGattManager @Inject constructor(
                 }
             }
 
-            override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic) {
+
+            override fun onCharacteristicChanged(g: BluetoothGatt, ch: BluetoothGattCharacteristic, value: ByteArray) {
                 if (ch.uuid == MESH_RX_CHAR_UUID) {
-                    val snap = ch.value.clone()
+                    val snap = value.clone()
                     Log.d(TAG, "← RX ${snap.size} B  ${snap.joinToString(" ") { "%02X".format(it) }}")
                     incoming.tryEmit(snap)
                 }
@@ -126,6 +128,7 @@ class AndroidGattManager @Inject constructor(
         val ok = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
             g.writeCharacteristic(tx, payload, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == SUCCESS
         else {
+            // Likely failed as API < 33, try old API
             tx.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             tx.value     = payload
             g.writeCharacteristic(tx)
@@ -137,8 +140,8 @@ class AndroidGattManager @Inject constructor(
     override fun incomingMessages(): Flow<ByteArray> = incoming.asSharedFlow()
 
     companion object {
-        val MESH_SERVICE_UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")
-        val MESH_TX_CHAR_UUID = UUID.fromString("0000feed-0001-1000-8000-00805f9b34fb")
-        val MESH_RX_CHAR_UUID = UUID.fromString("0000feed-0002-1000-8000-00805f9b34fb")
+        val MESH_SERVICE_UUID: UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")
+        val MESH_TX_CHAR_UUID: UUID = UUID.fromString("0000feed-0001-1000-8000-00805f9b34fb")
+        val MESH_RX_CHAR_UUID:UUID = UUID.fromString("0000feed-0002-1000-8000-00805f9b34fb")
     }
 }
