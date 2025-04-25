@@ -16,6 +16,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
@@ -30,23 +31,32 @@ import androidx.navigation.NavController
 
 @Composable
 fun BleChatScreen(
-    address: String,
+    chatId       : Long,
+    chatTitle    : String,
     navController: NavController,
-    viewModel: BleChatViewModel = hiltViewModel()
+    viewModel    : BleChatViewModel = hiltViewModel()
 ) {
-    val messages by viewModel.incomingMessages.collectAsState(initial = emptyList())
+    /* tell VM which chat to observe ---------------------------------- */
+    LaunchedEffect(chatId) { viewModel.setChat(chatId) }
+
+    val messages by viewModel.messages.collectAsState(emptyList())
+
     var input by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        // 1) message list
+
+        Text(chatTitle)                       /* simple header */
+
         LazyColumn(Modifier.weight(1f)) {
-            items(messages) { msg ->
-                Text(msg)
+            items(
+                items = messages,
+                key   = { it.msgId }
+            ) { m ->
+                Text(m.body)
                 Spacer(Modifier.height(4.dp))
             }
         }
 
-        // 2) text entry + send
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -58,11 +68,10 @@ fun BleChatScreen(
                 placeholder = { Text("Type a message…") }
             )
             Button(onClick = {
-                viewModel.sendMessage(input)
+                viewModel.send(input)
                 input = ""
-            }) {
-                Text("Send")
-            }
+            }) { Text("Send") }
         }
     }
 }
+

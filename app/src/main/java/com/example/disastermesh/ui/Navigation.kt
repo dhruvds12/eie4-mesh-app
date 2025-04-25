@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2022 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.example.disastermesh.ui
 
 import android.os.Build
@@ -29,59 +13,80 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.disastermesh.feature.ble.BleChatScreen
-import com.example.disastermesh.feature.ble.BleConnectScreen
 import com.example.disastermesh.feature.disastermessage.ui.DisasterMessageScreen
 import com.example.disastermesh.feature.ble.BleScanScreen
-
-
+import com.example.disastermesh.feature.ble.BleChatScreen
+import com.example.disastermesh.feature.ble.ui.ChatListScreen
+import com.example.disastermesh.feature.ble.ui.LandingScreen
+import com.example.disastermesh.feature.ble.nav.Screen   // ← sealed-class routes
 
 @Composable
 fun MainNavigation() {
+
     val navController = rememberNavController()
 
-    NavHost(navController, startDestination = "main") {
-        composable("main") {
+    /* ------------------------------------------------------------------ */
+    /*  Root navigation graph                                             */
+    /* ------------------------------------------------------------------ */
+    NavHost(
+        navController  = navController,
+        startDestination = Screen.Landing.route   // new start page
+    ) {
+
+        /* ------------ landing = connect / 3 buttons ------------------- */
+        composable(Screen.Landing.route) {
+            LandingScreen(nav = navController)
+        }
+
+        /* ------------ BLE scan list ----------------------------------- */
+        composable(Screen.Scan.route) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                BleScanScreen(
+                    modifier     = Modifier.padding(16.dp),
+                    navController = navController
+                )
+            } else {
+                Text("BLE scanning requires Android 12 or higher")
+            }
+        }
+
+        /* ------------ list of node-to-node OR user-to-user chats ------ */
+        composable(
+            Screen.ChatList.route,
+            arguments = listOf(navArgument("type") { type = NavType.StringType })
+        ) { back ->
+            ChatListScreen(
+                type = back.arguments!!.getString("type")!!,
+                nav  = navController
+            )
+        }
+
+        /* ------------ individual chat (any type) ---------------------- */
+        composable(
+            Screen.Chat.route,
+            arguments = listOf(
+                navArgument("chatId") { type = NavType.LongType },
+                navArgument("title")  { type = NavType.StringType }
+            )
+        ) { back ->
+            BleChatScreen(
+                chatId    = back.arguments!!.getLong("chatId"),
+                chatTitle = back.arguments!!.getString("title")!!,
+                navController = navController
+            )
+        }
+
+        /* ------------ legacy “main” screen keeps demo feature --------- */
+        composable("main-demo") {
             Column(Modifier.padding(16.dp)) {
                 DisasterMessageScreen(modifier = Modifier.weight(1f))
                 Button(
-                    onClick = { navController.navigate("bleScan") },
+                    onClick = { navController.navigate(Screen.Landing.route) },
                     modifier = Modifier.padding(top = 16.dp)
                 ) {
-                    Text("Go to BLE Scan")
+                    Text("Go to Mesh Chat")
                 }
             }
-        }
-
-        composable("bleScan") {
-            //TODO: BleScanScreen required version >= 31 min version is 23 in project
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                BleScanScreen(modifier = Modifier.padding(16.dp), navController = navController)
-            } else {
-                Text("BLE scanning requires Android 12+")
-            }
-        }
-
-        composable(
-            "bleConnect/{address}",
-            arguments = listOf(navArgument("address") { type = NavType.StringType })
-        ) { backStack ->
-            val addr = backStack.arguments!!.getString("address")!!
-            BleConnectScreen(address = addr,
-                navController = navController)
-        }
-
-        composable(
-            "bleChat/{address}",
-            arguments = listOf(navArgument("address") {
-                type = NavType.StringType
-            })
-        ) { backStack ->
-            val address = backStack.arguments!!.getString("address")!!
-            BleChatScreen(
-                address = address,
-                navController = navController
-            )
         }
     }
 }

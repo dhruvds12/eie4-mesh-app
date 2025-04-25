@@ -1,6 +1,7 @@
 package com.example.disastermesh.core.ble
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
 interface GattManager {
@@ -19,6 +20,8 @@ interface GattManager {
      * Each notification from RX characteristic gets emitted here.
      */
     fun incomingMessages(): Flow<ByteArray>
+
+    fun connectionEvents(): StateFlow<GattConnectionEvent?>
 }
 
 sealed class GattConnectionEvent {

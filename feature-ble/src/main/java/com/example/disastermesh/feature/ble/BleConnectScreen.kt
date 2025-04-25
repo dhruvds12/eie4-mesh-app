@@ -82,7 +82,7 @@ fun BleConnectScreen(
         }
 
         Spacer(Modifier.height(16.dp))
-
+        //TODO Change button text based on connection state
         Button(
             onClick = { viewModel.disconnect() },
             modifier = Modifier.fillMaxWidth()

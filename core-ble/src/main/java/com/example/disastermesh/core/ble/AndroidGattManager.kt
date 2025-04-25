@@ -16,6 +16,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val TAG = "AndroidGattMgr"
+//
 private val CCCD_UUID: UUID =
     UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")    // standard CCCD
 
@@ -27,6 +28,9 @@ class AndroidGattManager @Inject constructor(
     private var gatt   : BluetoothGatt? = null
     private var rxChar : BluetoothGattCharacteristic? = null
     private var cccd   : BluetoothGattDescriptor? = null        // remember which one we wrote
+    private val _events = MutableStateFlow<GattConnectionEvent?>(null)
+
+
 
     private val incoming = MutableSharedFlow<ByteArray>(replay = 1)
 
@@ -40,15 +44,21 @@ class AndroidGattManager @Inject constructor(
             ?: run { trySend(GattConnectionEvent.Error("Device not found")); close(); return@callbackFlow }
 
         trySend(GattConnectionEvent.Connecting)
+        _events.value = GattConnectionEvent.Connecting
 
         val cb = object : BluetoothGattCallback() {
 
             @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
             override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
-                when (newState) {
-                    BluetoothProfile.STATE_CONNECTED    -> { trySend(GattConnectionEvent.Connected); g.discoverServices() }
-                    BluetoothProfile.STATE_DISCONNECTED -> { trySend(GattConnectionEvent.Disconnected); close() }
+                val evt = when (newState) {
+                    BluetoothProfile.STATE_CONNECTED    -> GattConnectionEvent.Connected
+                    BluetoothProfile.STATE_DISCONNECTED -> GattConnectionEvent.Disconnected
+                    else                                -> return
                 }
+                trySend(evt)
+                _events.value = evt
+
+                if (evt == GattConnectionEvent.Connected) g.discoverServices()
             }
 
             @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
@@ -81,12 +91,15 @@ class AndroidGattManager @Inject constructor(
             }
 
             override fun onDescriptorWrite(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
-                if (d == cccd) {
-                    if (status == BluetoothGatt.GATT_SUCCESS)
-                        trySend(GattConnectionEvent.ServicesDiscovered)
-                    else
-                        trySend(GattConnectionEvent.Error("CCCD write failed ($status)"))
-                }
+                if (d != cccd) return
+
+                val evt = if (status == BluetoothGatt.GATT_SUCCESS)
+                    GattConnectionEvent.ServicesDiscovered
+                else
+                    GattConnectionEvent.Error("CCCD write failed ($status)")
+
+                trySend(evt)
+                _events.value = evt
             }
 
 
@@ -99,10 +112,13 @@ class AndroidGattManager @Inject constructor(
             }
 
             override fun onCharacteristicWrite(g: BluetoothGatt, ch: BluetoothGattCharacteristic, status: Int) {
-                if (status == BluetoothGatt.GATT_SUCCESS)
-                    trySend(GattConnectionEvent.WriteCompleted(ch.uuid))
+                val evt = if (status == BluetoothGatt.GATT_SUCCESS)
+                    GattConnectionEvent.WriteCompleted(ch.uuid)
                 else
-                    trySend(GattConnectionEvent.Error("Write failed: $status"))
+                    GattConnectionEvent.Error("Write failed: $status")
+
+                trySend(evt)
+                _events.value = evt
             }
         }
 
@@ -112,7 +128,7 @@ class AndroidGattManager @Inject constructor(
     }
 
     /* --------------------------------------------------------------------- */
-    /*  disconnect / send / flows (unchanged)                                */
+    /*  disconnect / send / flows                          */
     /* --------------------------------------------------------------------- */
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun disconnect() { gatt?.disconnect() }
@@ -138,6 +154,7 @@ class AndroidGattManager @Inject constructor(
     }
 
     override fun incomingMessages(): Flow<ByteArray> = incoming.asSharedFlow()
+    override fun connectionEvents(): StateFlow<GattConnectionEvent?> = _events
 
     companion object {
         val MESH_SERVICE_UUID: UUID = UUID.fromString("4fafc201-1fb5-459e-8fcc-c5c9c331914b")

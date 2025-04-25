@@ -31,8 +31,12 @@ android {
 }
 
 dependencies {
+    implementation(project(":core-database"))
+    implementation(project(":core-database"))
+    implementation(project(":core-data"))
     // Hilt for DI
     implementation(libs.hilt.android)
+    implementation(libs.androidx.room.common.jvm)
     kapt         (libs.hilt.compiler)
 
     // Coroutines for any Flow/async work in your scanner

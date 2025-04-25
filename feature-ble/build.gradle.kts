@@ -37,10 +37,11 @@ android {
 
 dependencies {
     implementation(project(":core-data"))
+    implementation(project(":core-database"))
     implementation(project(":core-ui"))
     implementation(project(":core-ble"))
     androidTestImplementation(project(":core-testing"))
-
+    implementation("androidx.compose.material:material-icons-extended:1.6.5")
     // Core Android dependencies
     implementation(libs.androidx.activity.compose)
 
