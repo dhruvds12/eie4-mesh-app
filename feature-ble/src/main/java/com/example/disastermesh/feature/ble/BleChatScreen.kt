@@ -1,77 +1,68 @@
+/* feature-ble/chat/BleChatScreen.kt */
 package com.example.disastermesh.feature.ble
 
-
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import android.os.Build
+import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.feature.ble.nav.Screen
-import com.example.disastermesh.feature.ble.ui.LandingViewModel
+import com.example.disastermesh.feature.ble.ui.DateHeader
 import com.example.disastermesh.feature.ble.ui.MessageBubble
+import com.example.disastermesh.feature.ble.ui.model.ChatItem
+import com.example.disastermesh.feature.ble.ui.LandingViewModel
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun BleChatScreen(
-    chatId       : Long,
-    chatTitle    : String,
+    chatId    : Long,
+    chatTitle : String,
     navController: NavController,
-    viewModel    : BleChatViewModel = hiltViewModel()
+    vm : BleChatViewModel = hiltViewModel()
 ) {
+    /* make VM switch to this chat */
+    LaunchedEffect(chatId) { vm.setChat(chatId) }
 
-    LaunchedEffect(chatId) { viewModel.setChat(chatId) }
-    val currentEntry by navController.currentBackStackEntryAsState()
-
-    val landingEntry = remember(currentEntry) {
+    /* obtain LandingViewModel (to read connection status) */
+    val landingEntry = remember(navController.currentBackStackEntryAsState().value) {
         navController.getBackStackEntry(Screen.Landing.route)
     }
     val landingVm: LandingViewModel = hiltViewModel(landingEntry)
     val connected by landingVm.connection.collectAsState()
 
-    val messages by viewModel.messages.collectAsState()
-    var input by remember { mutableStateOf("") }
+    val items by vm.items.collectAsState()
+
+    var draft by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
 
-        Text(chatTitle)
+        Text(chatTitle, style = MaterialTheme.typography.titleMedium)
 
         LazyColumn(
             Modifier.weight(1f),
-            reverseLayout = false,               // newest at bottom
             contentPadding = PaddingValues(vertical = 8.dp),
+            reverseLayout = false
         ) {
-            items(
-                items = messages,
-                key   = { it.msgId }
-            ) { m ->
-                MessageBubble(m)
+            items(items, key = {
+                when (it) {
+                    is ChatItem.Header -> "H:${it.label}"
+                    is ChatItem.Bubble -> "M:${it.msg.msgId}"
+                }
+            }) { item ->
+                when (item) {
+                    is ChatItem.Header -> DateHeader(item.label)
+                    is ChatItem.Bubble -> MessageBubble(item.msg)
+                }
             }
         }
-
 
         val canSend = when (connected) {
             GattConnectionEvent.ServicesDiscovered     -> true
@@ -80,27 +71,21 @@ fun BleChatScreen(
             else                                       -> false
         }
 
-
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TextField(
-                value = input,
-                onValueChange = { input = it },
-                modifier = Modifier.weight(1f),
+                value = draft,
+                onValueChange = { draft = it },
                 placeholder = { Text("Type a message…") },
-                enabled = canSend
+                modifier = Modifier.weight(1f),
+                enabled  = canSend
             )
             Button(
-                onClick = {
-                    viewModel.send(input)
-                    input = ""
-                },
-                enabled = canSend && input.isNotBlank()
+                onClick  = { vm.send(draft); draft = "" },
+                enabled  = canSend && draft.isNotBlank()
             ) { Text("Send") }
         }
     }
 }
-
-

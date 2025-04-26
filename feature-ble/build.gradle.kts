@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.disastermesh.feature.disastermessage"
+    namespace = "com.example.disastermesh.feature.ble"
     compileSdk = 35
 
     defaultConfig {

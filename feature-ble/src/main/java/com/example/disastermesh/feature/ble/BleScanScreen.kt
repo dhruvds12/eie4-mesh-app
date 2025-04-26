@@ -1,7 +1,6 @@
 package com.example.disastermesh.feature.ble
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.clickable
@@ -59,9 +58,6 @@ fun BleScanScreen(
         return                     //  ←  do **not** build the rest of the UI yet
     }
 
-    /* ------------------------------------------------------------------ */
-    /*  Step-2: we HAVE the permissions – safe to create VMs & collect    */
-    /* ------------------------------------------------------------------ */
     val currentEntry by navController.currentBackStackEntryAsState()
     /* Landing-level VM (shared) */
     val landingEntry = remember(currentEntry) {

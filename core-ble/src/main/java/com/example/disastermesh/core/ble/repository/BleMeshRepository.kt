@@ -32,16 +32,16 @@ class BleMeshRepository @Inject constructor(
 
     /* ---------------- public API ---------------------- */
 
-    override fun chats(t: MessageType) = dao.chatsOfType(t)
+    override fun chats(type: MessageType) = dao.chatsOfType(type)
 
     override fun stream(chatId: Long)  = dao.messages(chatId)
 
     @Transaction
-    override suspend fun send(chatId: Long, body: String, myUid: Int) {
+    override suspend fun send(chatId: Long, body: String, myUserId: Int) {
         val (type, a, b) = when (chatId) {
             0L            -> Triple(MessageType.BROADCAST, 0, 0)
             in   1..9_999L-> Triple(MessageType.NODE,      chatId.toInt(), 0)
-            else          -> Triple(MessageType.USER,      chatId.toInt(), myUid)
+            else          -> Triple(MessageType.USER,      chatId.toInt(), myUserId)
         }
         val cm = ChatMessage(type, a, b, body)
 

@@ -1,10 +1,14 @@
 package com.example.disastermesh.feature.ble
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.disastermesh.core.ble.repository.MeshRepository
-import com.example.disastermesh.core.database.entities.Message
+import com.example.disastermesh.feature.ble.ui.model.ChatItem
+import com.example.disastermesh.feature.ble.ui.model.withDateHeaders
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -19,12 +23,13 @@ class BleChatViewModel @Inject constructor(
     private val chatId = MutableStateFlow<Long?>(null)
     fun setChat(id: Long) { chatId.value = id }
 
-    val messages: StateFlow<List<Message>> =
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @RequiresApi(Build.VERSION_CODES.O)
+    val items: StateFlow<List<ChatItem>> =
         chatId.filterNotNull()
-            .flatMapLatest(repo::stream)
-            .stateIn(viewModelScope,
-                SharingStarted.WhileSubscribed(5_000),
-                emptyList())
+            .flatMapLatest { id -> repo.stream(id) }
+            .map { list -> list.withDateHeaders() }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
 
     /*  send ------------------------------------------------------------ */

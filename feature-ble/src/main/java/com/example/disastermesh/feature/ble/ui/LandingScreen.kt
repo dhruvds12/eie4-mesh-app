@@ -2,9 +2,9 @@ package com.example.disastermesh.feature.ble.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothDisabled
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,7 +14,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.feature.ble.nav.Screen
-import kotlinx.coroutines.launch
 
 @Composable
 fun LandingScreen(
@@ -52,7 +51,7 @@ fun LandingScreen(
                 is GattConnectionEvent.WriteCompleted -> "Connected"
                 is GattConnectionEvent.CharacteristicRead -> "Connected"
                 is GattConnectionEvent.Error     -> "Error: ${(state as GattConnectionEvent.Error).reason}"
-                else                             -> state.toString()
+//                else                             -> state.toString()
             }
         )
 
@@ -75,7 +74,6 @@ fun LandingScreen(
 
         ChatTypeButton(
             label = "Broadcast",
-            enabled = true
         ) {
             nav.navigate(
                 Screen.Chat.route
@@ -86,14 +84,12 @@ fun LandingScreen(
 
         ChatTypeButton(
             label   = "Node ↔ Node",
-            enabled = true
         ) {
             nav.navigate(Screen.ChatList.route.replace("{type}", "NODE"))
         }
 
         ChatTypeButton(
             label   = "User ↔ User",
-            enabled = true
         ) {
             nav.navigate(Screen.ChatList.route.replace("{type}", "USER"))
         }
@@ -102,13 +98,13 @@ fun LandingScreen(
 
 
 @Composable
-private fun ChatTypeButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+private fun ChatTypeButton(label: String, enabled: Boolean = true, onClick: () -> Unit) {
     Button(
         modifier = Modifier.fillMaxWidth(),
         enabled  = enabled,
         onClick  = onClick
     ) {
-        Icon(Icons.Default.Chat, null)
+        Icon(Icons.AutoMirrored.Filled.Chat, null)
         Spacer(Modifier.width(8.dp))
         Text(label)
     }
