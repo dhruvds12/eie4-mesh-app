@@ -25,5 +25,6 @@ data class Message(
     val chatId : Long,
     val mine   : Boolean,                  // true = I sent it
     val ts     : Long = System.currentTimeMillis(),
-    val body   : String
+    val body   : String,
+    val status : MessageStatus = MessageStatus.SENDING
 )

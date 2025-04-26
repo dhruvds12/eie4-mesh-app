@@ -6,8 +6,7 @@ import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.core.ble.GattManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -17,19 +16,26 @@ class LandingViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _connection = MutableStateFlow<GattConnectionEvent?>(null)
-    val connection: StateFlow<GattConnectionEvent?> = _connection
+    val      connection : StateFlow<GattConnectionEvent?> = _connection.asStateFlow()
 
-    private var connectJob: Job? = null          // ← track current job
+    private var connectJob: Job? = null
 
-    /** Called from the Scan screen when user taps a device. */
+    init {
+        gatt.connectionEvents()
+            .onEach { _connection.value = it }
+            .launchIn(viewModelScope)
+    }
+
     fun connect(address: String) {
-        // if already trying the same address, ignore
-        if (connectJob?.isActive == true) return
+        connectJob?.cancel()
 
         connectJob = viewModelScope.launch {
-            gatt.connect(address).collect { _connection.value = it }
+            gatt.connect(address).collect()
         }
     }
 
-    fun disconnect() { gatt.disconnect() }
+
+    fun disconnect() {
+        gatt.disconnect()
+    }
 }

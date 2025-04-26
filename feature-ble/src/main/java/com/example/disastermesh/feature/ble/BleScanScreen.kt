@@ -1,5 +1,6 @@
 package com.example.disastermesh.feature.ble
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -13,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -22,26 +24,54 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.disastermesh.feature.ble.nav.Screen
 import com.example.disastermesh.feature.ble.ui.LandingViewModel
-
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 
 @RequiresApi(Build.VERSION_CODES.S)
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun BleScanScreen(
     modifier: Modifier = Modifier,
     navController: NavHostController
 ) {
-    // observe the controller’s current entry as State<NavBackStackEntry?>
-    val currentEntry by navController.currentBackStackEntryAsState()
+    /* ------------------------------------------------------------------ */
+    /*  Step-1: request permissions                                       */
+    /* ------------------------------------------------------------------ */
+    val permState = rememberMultiplePermissionsState(
+        listOf(
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        )
+    )
 
-    // now remember the “landing” entry *keyed* on that currentEntry
+    LaunchedEffect(Unit) { permState.launchMultiplePermissionRequest() }
+
+    if (!permState.allPermissionsGranted) {
+        /* show message while waiting or if denied */
+        Text(
+            "Please grant BLE & location permissions to start scanning.",
+            modifier = Modifier.padding(16.dp)
+        )
+        return                     //  ←  do **not** build the rest of the UI yet
+    }
+
+    /* ------------------------------------------------------------------ */
+    /*  Step-2: we HAVE the permissions – safe to create VMs & collect    */
+    /* ------------------------------------------------------------------ */
+    val currentEntry by navController.currentBackStackEntryAsState()
+    /* Landing-level VM (shared) */
     val landingEntry = remember(currentEntry) {
-        navController.getBackStackEntry("landing")
+        navController.getBackStackEntry(Screen.Landing.route)
     }
     val landingVm: LandingViewModel = hiltViewModel(landingEntry)
 
+    /* Scan-specific VM */
     val scanVm: BleScanViewModel = hiltViewModel()
+
     val devices by scanVm.devices.collectAsState(emptyList())
 
     LazyColumn(modifier = modifier) {
@@ -51,8 +81,8 @@ fun BleScanScreen(
                     .fillMaxWidth()
                     .padding(8.dp)
                     .clickable {
-                        landingVm.connect(device.address)
-                        navController.popBackStack()
+                        landingVm.connect(device.address)   // start GATT connect
+                        navController.popBackStack()        // back to Landing
                     },
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {

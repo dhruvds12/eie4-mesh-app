@@ -7,6 +7,7 @@ import com.example.disastermesh.core.database.MessageType
 import com.example.disastermesh.core.database.dao.ChatDao
 import com.example.disastermesh.core.database.entities.Chat
 import com.example.disastermesh.core.database.entities.Message
+import com.example.disastermesh.core.database.entities.MessageStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -43,7 +44,6 @@ class BleMeshRepository @Inject constructor(
             else          -> Triple(MessageType.USER,      chatId.toInt(), myUid)
         }
         val cm = ChatMessage(type, a, b, body)
-        gatt.sendMessage(MessageCodec.encode(cm))
 
         val title = when (type) {
             MessageType.BROADCAST -> "Broadcast"
@@ -53,7 +53,17 @@ class BleMeshRepository @Inject constructor(
         dao.upsertChat(Chat(id = chatId, type = type, title = title))
 
         /* optimistic local insert */
-        dao.insert(Message(chatId = chatId, mine = true, body = body))
+        val msgId = dao.insert(Message(chatId = chatId, mine = true, body = body))
+
+        val ok = runCatching {
+            gatt.sendMessage(MessageCodec.encode(cm))
+        }.isSuccess
+
+        dao.setStatus(
+            id = msgId,
+            s  = if (ok) MessageStatus.SENT else MessageStatus.SENDING
+        )
+
     }
 
     /* ---------------- helpers ------------------------- */

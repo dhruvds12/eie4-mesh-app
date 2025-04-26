@@ -117,8 +117,8 @@ class AndroidGattManager @Inject constructor(
                 else
                     GattConnectionEvent.Error("Write failed: $status")
 
-                trySend(evt)
-                _events.value = evt
+                trySend(evt) // should not send
+                _events.value = evt // should not send
             }
         }
 

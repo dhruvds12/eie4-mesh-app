@@ -5,6 +5,7 @@ import androidx.room.*
 import com.example.disastermesh.core.database.entities.Chat
 import com.example.disastermesh.core.database.entities.Message
 import com.example.disastermesh.core.database.MessageType
+import com.example.disastermesh.core.database.entities.MessageStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -24,5 +25,8 @@ interface ChatDao {
     fun messages(cid: Long): Flow<List<Message>>
 
     @Insert
-    suspend fun insert(msg: Message)
+    suspend fun insert(msg: Message): Long
+
+    @Query("UPDATE Message SET status = :s WHERE msgId = :id")
+    suspend fun setStatus(id: Long, s: MessageStatus)
 }

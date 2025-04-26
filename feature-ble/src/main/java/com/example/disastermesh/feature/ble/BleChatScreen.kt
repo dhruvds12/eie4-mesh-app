@@ -3,6 +3,7 @@ package com.example.disastermesh.feature.ble
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.disastermesh.core.ble.GattConnectionEvent
+import com.example.disastermesh.feature.ble.nav.Screen
+import com.example.disastermesh.feature.ble.ui.LandingViewModel
+import com.example.disastermesh.feature.ble.ui.MessageBubble
 
 @Composable
 fun BleChatScreen(
@@ -36,26 +42,44 @@ fun BleChatScreen(
     navController: NavController,
     viewModel    : BleChatViewModel = hiltViewModel()
 ) {
-    /* tell VM which chat to observe ---------------------------------- */
+
     LaunchedEffect(chatId) { viewModel.setChat(chatId) }
+    val currentEntry by navController.currentBackStackEntryAsState()
 
-    val messages by viewModel.messages.collectAsState(emptyList())
+    val landingEntry = remember(currentEntry) {
+        navController.getBackStackEntry(Screen.Landing.route)
+    }
+    val landingVm: LandingViewModel = hiltViewModel(landingEntry)
+    val connected by landingVm.connection.collectAsState()
 
+    val messages by viewModel.messages.collectAsState()
     var input by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
 
-        Text(chatTitle)                       /* simple header */
+        Text(chatTitle)
 
-        LazyColumn(Modifier.weight(1f)) {
+        LazyColumn(
+            Modifier.weight(1f),
+            reverseLayout = false,               // newest at bottom
+            contentPadding = PaddingValues(vertical = 8.dp),
+        ) {
             items(
                 items = messages,
                 key   = { it.msgId }
             ) { m ->
-                Text(m.body)
-                Spacer(Modifier.height(4.dp))
+                MessageBubble(m)
             }
         }
+
+
+        val canSend = when (connected) {
+            GattConnectionEvent.ServicesDiscovered     -> true
+            is GattConnectionEvent.WriteCompleted      -> true
+            is GattConnectionEvent.CharacteristicRead  -> true
+            else                                       -> false
+        }
+
 
         Row(
             Modifier.fillMaxWidth(),
@@ -65,13 +89,18 @@ fun BleChatScreen(
                 value = input,
                 onValueChange = { input = it },
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Type a message…") }
+                placeholder = { Text("Type a message…") },
+                enabled = canSend
             )
-            Button(onClick = {
-                viewModel.send(input)
-                input = ""
-            }) { Text("Send") }
+            Button(
+                onClick = {
+                    viewModel.send(input)
+                    input = ""
+                },
+                enabled = canSend && input.isNotBlank()
+            ) { Text("Send") }
         }
     }
 }
+
 

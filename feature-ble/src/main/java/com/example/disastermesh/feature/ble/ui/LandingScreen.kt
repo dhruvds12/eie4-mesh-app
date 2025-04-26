@@ -23,7 +23,13 @@ fun LandingScreen(
 ) {
     val state by vm.connection.collectAsState()
 
-    val connected = state == GattConnectionEvent.ServicesDiscovered
+    val connected = when (state) {
+        GattConnectionEvent.ServicesDiscovered     -> true
+        is GattConnectionEvent.WriteCompleted      -> true
+        is GattConnectionEvent.CharacteristicRead  -> true
+        else                                       -> false
+    }
+
     val inFlight  = state == GattConnectionEvent.Connecting ||
             state == GattConnectionEvent.Connected
 
@@ -43,6 +49,8 @@ fun LandingScreen(
                 GattConnectionEvent.Connected    -> "Discovering services…"
                 GattConnectionEvent.ServicesDiscovered -> "Connected"
                 GattConnectionEvent.Disconnected -> "Disconnected"
+                is GattConnectionEvent.WriteCompleted -> "Connected"
+                is GattConnectionEvent.CharacteristicRead -> "Connected"
                 is GattConnectionEvent.Error     -> "Error: ${(state as GattConnectionEvent.Error).reason}"
                 else                             -> state.toString()
             }
@@ -64,33 +72,40 @@ fun LandingScreen(
             Text(if (connected) "Disconnect" else "Connect")
         }
 
-        if (connected) {
-            /* three chat-type buttons */
-            ChatTypeButton("Broadcast") {
-                nav.navigate(
-                    Screen.Chat.route
-                        .replace("{chatId}", "0")
-                        .replace("{title}",  "Broadcast")
-                )
-            }
-            ChatTypeButton("Node ↔ Node") {
-                nav.navigate(
-                    Screen.ChatList.route.replace("{type}", "NODE")
-                )
-            }
-            ChatTypeButton("User ↔ User") {
-                nav.navigate(
-                    Screen.ChatList.route.replace("{type}", "USER")
-                )
-            }
+
+        ChatTypeButton(
+            label = "Broadcast",
+            enabled = true
+        ) {
+            nav.navigate(
+                Screen.Chat.route
+                    .replace("{chatId}", "0")
+                    .replace("{title}",  "Broadcast")
+            )
+        }
+
+        ChatTypeButton(
+            label   = "Node ↔ Node",
+            enabled = true
+        ) {
+            nav.navigate(Screen.ChatList.route.replace("{type}", "NODE"))
+        }
+
+        ChatTypeButton(
+            label   = "User ↔ User",
+            enabled = true
+        ) {
+            nav.navigate(Screen.ChatList.route.replace("{type}", "USER"))
         }
     }
 }
 
+
 @Composable
-private fun ChatTypeButton(label: String, onClick: () -> Unit) {
+private fun ChatTypeButton(label: String, enabled: Boolean, onClick: () -> Unit) {
     Button(
         modifier = Modifier.fillMaxWidth(),
+        enabled  = enabled,
         onClick  = onClick
     ) {
         Icon(Icons.Default.Chat, null)
