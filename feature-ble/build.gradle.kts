@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.disastermesh.feature.disastermessage"
+    namespace = "com.example.disastermesh.feature.ble"
     compileSdk = 35
 
     defaultConfig {
@@ -37,10 +37,13 @@ android {
 
 dependencies {
     implementation(project(":core-data"))
+    implementation(project(":core-database"))
     implementation(project(":core-ui"))
     implementation(project(":core-ble"))
     androidTestImplementation(project(":core-testing"))
 
+    implementation("androidx.compose.material:material-icons-extended:1.6.5")
+    implementation("androidx.compose.foundation:foundation:1.4.0")
     // Core Android dependencies
     implementation(libs.androidx.activity.compose)
 
