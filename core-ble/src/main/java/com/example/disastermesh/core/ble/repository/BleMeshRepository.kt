@@ -41,7 +41,7 @@ class BleMeshRepository @Inject constructor(
         val (type, a, b) = when (chatId) {
             0L            -> Triple(MessageType.BROADCAST, 0, 0)
             in   1..9_999L-> Triple(MessageType.NODE,      chatId.toInt(), 0)
-            else          -> Triple(MessageType.USER,      chatId.toInt(), myUserId)
+            else          -> Triple(MessageType.USER,      chatId.toInt(), myUserId) // destA is destination and destB is my ID
         }
         val cm = ChatMessage(type, a, b, body)
 
@@ -71,8 +71,8 @@ class BleMeshRepository @Inject constructor(
     private suspend fun saveIncoming(cm: ChatMessage) {
         val cid = when (cm.type) {
             MessageType.BROADCAST -> 0L
-            MessageType.NODE      -> cm.destA.toLong()
-            MessageType.USER      -> cm.destA.toLong()
+            MessageType.NODE      -> cm.sender.toLong()
+            MessageType.USER      -> cm.sender.toLong()
         }
 
         dao.upsertChat(
@@ -81,8 +81,8 @@ class BleMeshRepository @Inject constructor(
                 type  = cm.type,
                 title = when (cm.type) {
                     MessageType.BROADCAST -> "Broadcast"
-                    MessageType.NODE      -> "Node ${cm.destA}"
-                    MessageType.USER      -> "User ${cm.destA}"
+                    MessageType.NODE      -> "Node ${cm.sender}"
+                    MessageType.USER      -> "User ${cm.sender}"
                 }
             )
         )

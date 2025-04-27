@@ -28,8 +28,8 @@ object MessageCodec {
             .order(ByteOrder.LITTLE_ENDIAN)
 
         buf.put(msg.type.id.toByte())
-        buf.putInt(msg.destA)
-        buf.putInt(msg.destB)
+        buf.putInt(msg.dest)
+        buf.putInt(msg.sender)
         buf.put(body)
         return buf.array()
     }
@@ -43,16 +43,16 @@ object MessageCodec {
             if (buf.remaining() < 9) return null           // header incomplete
 
             val type  = MessageType.fromId(buf.get().toInt())
-            val destA = buf.int
-            val destB = buf.int
+            val dest = buf.int
+            val sender = buf.int
 
             val payload = ByteArray(buf.remaining())
             buf.get(payload)
 
             ChatMessage(
                 type  = type,
-                destA = destA,
-                destB = destB,
+                dest = dest,
+                sender = sender,
                 body  = String(payload, Charsets.UTF_8)
             )
         } catch (e: Exception) {
