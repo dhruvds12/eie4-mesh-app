@@ -4,10 +4,20 @@ import com.example.disastermesh.core.database.MessageType
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+/*
+Message types:
+Broadcast: 1
+Node: 2
+User: 3
+
+UserID update: TBC => 4
+ */
+
 /**
  *  [TYPE 1 B] [DEST-A 4 B] [DEST-B 4 B] [UTF-8 PAYLOAD …]
- *  Big-endian network byte order.
+ *  Little-endian network byte order.
  */
+
 object MessageCodec {
 
     /* --------------------------- encode -------------------------------- */
@@ -15,7 +25,7 @@ object MessageCodec {
     fun encode(msg: ChatMessage): ByteArray {
         val body = msg.body.toByteArray(Charsets.UTF_8)
         val buf  = ByteBuffer.allocate(1 + 4 + 4 + body.size)
-            .order(ByteOrder.BIG_ENDIAN)
+            .order(ByteOrder.LITTLE_ENDIAN)
 
         buf.put(msg.type.id.toByte())
         buf.putInt(msg.destA)
@@ -28,7 +38,7 @@ object MessageCodec {
 
     fun decode(bytes: ByteArray): ChatMessage? {
         return try {
-            val buf = ByteBuffer.wrap(bytes).order(ByteOrder.BIG_ENDIAN)
+            val buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
 
             if (buf.remaining() < 9) return null           // header incomplete
 
