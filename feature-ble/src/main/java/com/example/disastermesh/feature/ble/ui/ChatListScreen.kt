@@ -36,7 +36,8 @@ fun ChatListScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = { /* TODO */ }) {
+            FloatingActionButton(onClick = { nav.navigate(
+                Screen.Discover.route.replace("{kind}", if (type == "NODE") "NODE" else "USER") ) }) {
                 Icon(Icons.Default.Add, contentDescription = "New chat")
             }
         }

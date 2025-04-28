@@ -20,13 +20,27 @@ class BleMeshRepository @Inject constructor(
     private val dao  : ChatDao
 ) : MeshRepository {
 
+    private val _nodeList = MutableSharedFlow<List<Int>>(replay = 0)
+    private val _userList = MutableSharedFlow<List<Int>>(replay = 0)
+
+    override val nodeList: Flow<List<Int>> = _nodeList
+    override val userList: Flow<List<Int>> = _userList
+
     private val scope = CoroutineScope(Dispatchers.IO)
 
     init {
-        /* keep collecting BLE forever and insert into Room */
         gatt.incomingMessages()
             .mapNotNull { MessageCodec.decode(it) }
-            .onEach  { saveIncoming(it) }
+            .onEach  { obj ->
+                when (obj) {
+                    is ChatMessage   -> saveIncoming(obj)
+                    is ListResponse  -> when (obj.opcode) {
+                        Opcode.LIST_NODES_RESP -> _nodeList.emit(obj.ids)
+                        Opcode.LIST_USERS_RESP -> _userList.emit(obj.ids)
+                        else -> {}
+                    }
+                }
+            }
             .launchIn(scope)
     }
 
@@ -65,6 +79,19 @@ class BleMeshRepository @Inject constructor(
         )
 
     }
+
+    suspend fun requestNodes() = gatt.sendMessage(
+        MessageCodec.encodeListRequest(Opcode.LIST_NODES_REQ)
+    )
+
+    suspend fun requestUsers() = gatt.sendMessage(
+        MessageCodec.encodeListRequest(Opcode.LIST_USERS_REQ)
+    )
+
+    suspend fun ensureChatExists(id: Long, title: String, type: MessageType) {
+        dao.upsertChat(Chat(id = id, title = title, type = type))
+    }
+
 
     /* ---------------- helpers ------------------------- */
 

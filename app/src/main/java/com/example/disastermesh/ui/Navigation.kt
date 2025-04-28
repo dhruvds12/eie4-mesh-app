@@ -1,6 +1,7 @@
 package com.example.disastermesh.ui
 
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -19,7 +20,10 @@ import com.example.disastermesh.feature.ble.BleChatScreen
 import com.example.disastermesh.feature.ble.ui.ChatListScreen
 import com.example.disastermesh.feature.ble.ui.LandingScreen
 import com.example.disastermesh.feature.ble.nav.Screen   // ← sealed-class routes
+import com.example.disastermesh.feature.ble.ui.DiscoveryScreen
+import com.example.disastermesh.feature.ble.ui.DiscoveryType
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainNavigation() {
 
@@ -88,5 +92,18 @@ fun MainNavigation() {
                 }
             }
         }
+
+
+        composable(
+            Screen.Discover.route,
+            arguments = listOf(navArgument("kind") { defaultValue = "NODE" })
+        ) { back ->
+            val kind = back.arguments?.getString("kind") ?: "NODE"
+            DiscoveryScreen(
+                type = if (kind == "NODE") DiscoveryType.NODE else DiscoveryType.USER,
+                nav  = navController
+            )
+        }
+
     }
 }

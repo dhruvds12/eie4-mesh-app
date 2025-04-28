@@ -11,5 +11,8 @@ interface MeshRepository {
 
     fun stream(chatId: Long): Flow<List<com.example.disastermesh.core.database.entities.Message>>
 
+    val nodeList: Flow<List<Int>>
+    val userList: Flow<List<Int>>
+
     suspend fun send(chatId: Long, body: String, myUserId: Int)
 }
