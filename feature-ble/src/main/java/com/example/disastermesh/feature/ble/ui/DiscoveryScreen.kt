@@ -11,55 +11,61 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.disastermesh.core.ble.makeChatId          // ← NEW
 import com.example.disastermesh.core.database.MessageType
 import com.example.disastermesh.feature.ble.nav.Screen
 import kotlinx.coroutines.launch
 
 @Composable
 fun DiscoveryScreen(
-    type   : DiscoveryType,          // NODE or USER
-    nav    : NavController,
-    vm     : DiscoveryVm = hiltViewModel()
+    type : DiscoveryType,          // NODE or USER
+    nav  : NavController,
+    vm   : DiscoveryVm = hiltViewModel()
 ) {
     val scope = rememberCoroutineScope()
-    /** first composition: kick off the request  */
+
+    /* start query once */
     LaunchedEffect(Unit) { vm.query(type) }
 
-    val ids   by vm.ids.collectAsState()         // null = searching
+    val ids   by vm.ids.collectAsState()
     val empty by vm.empty.collectAsState(false)
 
     Column(
         Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+
         Text("Known ${type.label}s")
 
         when {
             ids == null && !empty -> {
-                Row(Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                     CircularProgressIndicator()
                     Spacer(Modifier.width(8.dp))
                     Text("Searching …")
                 }
             }
+
             empty -> Text("No ${type.label.lowercase()}s found.")
+
             else -> LazyColumn {
-                items(ids ?: emptyList()) { id ->
+                items(ids ?: emptyList(), key = { it }) { id ->
+                    val msgType = if (type == DiscoveryType.NODE)
+                        MessageType.NODE else MessageType.USER
+                    val title   = if (type == DiscoveryType.NODE)
+                        "Node $id" else "User $id"
+
                     Text(
-                        text = if (type == DiscoveryType.NODE) "Node $id" else "User $id",
+                        text = title,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
                                 scope.launch {
-                                    val chatId  = id.toLong()
-                                    val title   = if (type == DiscoveryType.NODE)
-                                        "Node $id" else "User $id"
-                                    val msgType = if (type == DiscoveryType.NODE)
-                                        MessageType.NODE else MessageType.USER
+                                    /* 1) make sure Chat row exists */
+                                    vm.ensureChat(msgType, id, title)
 
-                                    vm.ensureChat(chatId, title, msgType)
-
+                                    /* 2) open the chat */
+                                    val chatId = makeChatId(msgType, id)
                                     nav.navigate(
                                         Screen.Chat.route
                                             .replace("{chatId}", chatId.toString())
@@ -67,7 +73,6 @@ fun DiscoveryScreen(
                                     )
                                 }
                             }
-
                             .padding(8.dp)
                     )
                 }
@@ -76,4 +81,5 @@ fun DiscoveryScreen(
     }
 }
 
+/** which list we are showing */
 enum class DiscoveryType(val label: String) { NODE("Node"), USER("User") }

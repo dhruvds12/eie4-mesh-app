@@ -78,7 +78,6 @@ android {
 
 dependencies {
     implementation(project(":core-ui"))
-    implementation(project(":feature-disastermessage"))
     implementation(project(":feature-ble"))
 
     // Core Android dependencies

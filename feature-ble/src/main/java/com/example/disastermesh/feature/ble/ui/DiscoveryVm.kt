@@ -2,6 +2,7 @@ package com.example.disastermesh.feature.ble.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.disastermesh.core.ble.makeChatId
 import com.example.disastermesh.core.ble.repository.BleMeshRepository
 import com.example.disastermesh.core.database.MessageType
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -20,12 +21,15 @@ class DiscoveryVm @Inject constructor(
     val ids   : StateFlow<List<Int>?> = _ids
     val empty : StateFlow<Boolean>    = _empty
 
-    fun query(t: DiscoveryType) {
-        _ids.value   = null
+    /* ------------------------------------------------------------------ */
+    /*  ask current node for its list                                     */
+    /* ------------------------------------------------------------------ */
+    fun query(kind: DiscoveryType) {
+        _ids.value = null        // show spinner
         _empty.value = false
 
         viewModelScope.launch {
-            when (t) {
+            when (kind) {
                 DiscoveryType.NODE -> {
                     repo.requestNodes()
                     repo.nodeList.firstOrNull()?.let {
@@ -42,7 +46,12 @@ class DiscoveryVm @Inject constructor(
         }
     }
 
-    suspend fun ensureChat(id: Long, title: String, type: MessageType) =
-        repo.ensureChatExists(id, title, type)
+    /* ------------------------------------------------------------------ */
+    /*  guarantee a Chat row exists                                       */
+    /* ------------------------------------------------------------------ */
+    suspend fun ensureChat(type: MessageType, target: Int, title: String) {
+        val cid = makeChatId(type, target)
+        repo.ensureChatExists(cid, title, type)
+    }
 
 }

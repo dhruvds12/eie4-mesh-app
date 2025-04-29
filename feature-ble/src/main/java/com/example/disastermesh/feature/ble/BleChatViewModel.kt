@@ -6,7 +6,9 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.disastermesh.core.ble.ProfilePrefs
+import com.example.disastermesh.core.ble.idType
 import com.example.disastermesh.core.ble.repository.MeshRepository
+import com.example.disastermesh.core.database.MessageType
 import com.example.disastermesh.feature.ble.ui.model.ChatItem
 import com.example.disastermesh.feature.ble.ui.model.withDateHeaders
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -47,10 +49,11 @@ class BleChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             val cid = chatId.value ?: return@launch
+            val currentType  = idType(cid)
 
             val myUid = when {
                 /* user↔user needs a real UID – abort if none */
-                cid >= 10_000L && uidFlow.value == null -> return@launch
+                currentType == MessageType.USER  && uidFlow.value == null -> return@launch
                 /* else (broadcast / node) default to zero */
                 else -> uidFlow.value ?: 0
             }

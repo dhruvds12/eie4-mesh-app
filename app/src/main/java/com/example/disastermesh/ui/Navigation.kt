@@ -14,7 +14,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.disastermesh.feature.disastermessage.ui.DisasterMessageScreen
 import com.example.disastermesh.feature.ble.BleScanScreen
 import com.example.disastermesh.feature.ble.BleChatScreen
 import com.example.disastermesh.feature.ble.ui.ChatListScreen
@@ -79,19 +78,6 @@ fun MainNavigation() {
                 chatTitle = back.arguments!!.getString("title")!!,
                 navController = navController
             )
-        }
-
-        /* ------------ legacy “main” screen keeps demo feature --------- */
-        composable("main-demo") {
-            Column(Modifier.padding(16.dp)) {
-                DisasterMessageScreen(modifier = Modifier.weight(1f))
-                Button(
-                    onClick = { navController.navigate(Screen.Landing.route) },
-                    modifier = Modifier.padding(top = 16.dp)
-                ) {
-                    Text("Go to Mesh Chat")
-                }
-            }
         }
 
 

@@ -26,8 +26,6 @@ Message types:
 Broadcast: 1
 Node: 2
 User: 3
-
-UserID update: TBC => 4
  */
 
 /**

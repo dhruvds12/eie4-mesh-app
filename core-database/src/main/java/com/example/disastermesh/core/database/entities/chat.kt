@@ -5,13 +5,12 @@ import androidx.room.PrimaryKey
 import com.example.disastermesh.core.database.MessageType
 
 /**
- * One chat “room”.
- *
- * id rules
- * • 0                     → Broadcast
- * • 1 …  9 999            → Node-to-Node   (nodeId = id)
- * • 10 000 … Long.MAX     → User-to-User  (userId = id)
+ * Chat-ID layout:
+ *  0L                       → Broadcast
+ *  type.id in bits 32-39    → Message type   (NODE = 2, USER = 3)
+ *  target  in bits  0-31    → Counter-party  (nodeId or userId)
  */
+
 @Entity
 data class Chat(
     @PrimaryKey val id: Long,

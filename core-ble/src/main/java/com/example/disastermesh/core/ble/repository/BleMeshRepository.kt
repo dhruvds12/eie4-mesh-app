@@ -3,6 +3,9 @@ package com.example.disastermesh.core.ble.repository
 import androidx.room.Transaction
 import com.example.disastermesh.core.ble.GattManager
 import com.example.disastermesh.core.ble.MAX_MSG_CHARS
+import com.example.disastermesh.core.ble.idTarget
+import com.example.disastermesh.core.ble.idType
+import com.example.disastermesh.core.ble.makeChatId
 import com.example.disastermesh.core.data.*
 import com.example.disastermesh.core.database.MessageType
 import com.example.disastermesh.core.database.dao.ChatDao
@@ -56,17 +59,19 @@ class BleMeshRepository @Inject constructor(
         require(body.length <= MAX_MSG_CHARS) {
             "Message too long (${body.length} > $MAX_MSG_CHARS)"
         }
-        val (type, a, b) = when (chatId) {
-            0L            -> Triple(MessageType.BROADCAST, 0, 0)
-            in   1..9_999L-> Triple(MessageType.NODE,      chatId.toInt(), 0)
-            else          -> Triple(MessageType.USER,      chatId.toInt(), myUserId) // destA is destination and destB is my ID
+        val type   = idType(chatId)
+        val target = idTarget(chatId)
+
+        val cm = when (type) {
+            MessageType.BROADCAST -> ChatMessage(type, 0,          0,      body)
+            MessageType.NODE      -> ChatMessage(type, target,     0,      body)
+            MessageType.USER      -> ChatMessage(type, target, myUserId, body)
         }
-        val cm = ChatMessage(type, a, b, body)
 
         val title = when (type) {
             MessageType.BROADCAST -> "Broadcast"
-            MessageType.NODE      -> "Node $a"
-            MessageType.USER      -> "User $a"
+            MessageType.NODE      -> "Node $target"
+            MessageType.USER      -> "User $target"
         }
         dao.upsertChat(Chat(id = chatId, type = type, title = title))
 
@@ -100,12 +105,7 @@ class BleMeshRepository @Inject constructor(
     /* ---------------- helpers ------------------------- */
 
     private suspend fun saveIncoming(cm: ChatMessage) {
-        val cid = when (cm.type) {
-            MessageType.BROADCAST -> 0L
-            MessageType.NODE      -> cm.sender.toLong()
-            MessageType.USER      -> cm.sender.toLong()
-        }
-
+        val cid = makeChatId(cm.type, cm.sender)
         dao.upsertChat(
             Chat(
                 id    = cid,
