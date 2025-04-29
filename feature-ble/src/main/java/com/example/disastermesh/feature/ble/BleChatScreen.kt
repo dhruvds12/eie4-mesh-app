@@ -19,6 +19,7 @@ import com.example.disastermesh.feature.ble.ui.DateHeader
 import com.example.disastermesh.feature.ble.ui.MessageBubble
 import com.example.disastermesh.feature.ble.ui.model.ChatItem
 import com.example.disastermesh.feature.ble.ui.LandingViewModel
+import com.example.disastermesh.feature.ble.ui.MessageBar
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -75,17 +76,13 @@ fun BleChatScreen(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TextField(
-                value = draft,
-                onValueChange = { draft = it },
-                placeholder = { Text("Type a message…") },
-                modifier = Modifier.weight(1f),
-                enabled  = canSend
+            MessageBar(
+                text        = draft,
+                onTextChange= { draft = it },
+                onSend      = { vm.send(draft); draft = "" },
+                enabled     = canSend
             )
-            Button(
-                onClick  = { vm.send(draft); draft = "" },
-                enabled  = canSend && draft.isNotBlank()
-            ) { Text("Send") }
+
         }
     }
 }

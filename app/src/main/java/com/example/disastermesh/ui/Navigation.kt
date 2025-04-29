@@ -22,6 +22,7 @@ import com.example.disastermesh.feature.ble.ui.LandingScreen
 import com.example.disastermesh.feature.ble.nav.Screen   // ← sealed-class routes
 import com.example.disastermesh.feature.ble.ui.DiscoveryScreen
 import com.example.disastermesh.feature.ble.ui.DiscoveryType
+import com.example.disastermesh.feature.ble.ui.ProfileScreen
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -104,6 +105,9 @@ fun MainNavigation() {
                 nav  = navController
             )
         }
+
+        composable(Screen.Profile.route) { ProfileScreen(navController) }
+
 
     }
 }

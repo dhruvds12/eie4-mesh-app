@@ -1,6 +1,7 @@
 package com.example.disastermesh.core.ble.repository
 
 import androidx.room.Transaction
+import com.example.disastermesh.core.MAX_MSG_CHARS
 import com.example.disastermesh.core.ble.GattManager
 import com.example.disastermesh.core.data.*
 import com.example.disastermesh.core.database.MessageType
@@ -52,6 +53,9 @@ class BleMeshRepository @Inject constructor(
 
     @Transaction
     override suspend fun send(chatId: Long, body: String, myUserId: Int) {
+        require(body.length <= MAX_MSG_CHARS) {
+            "Message too long (${body.length} > $MAX_MSG_CHARS)"
+        }
         val (type, a, b) = when (chatId) {
             0L            -> Triple(MessageType.BROADCAST, 0, 0)
             in   1..9_999L-> Triple(MessageType.NODE,      chatId.toInt(), 0)
