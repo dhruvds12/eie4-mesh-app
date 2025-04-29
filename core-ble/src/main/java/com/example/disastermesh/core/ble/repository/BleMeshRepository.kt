@@ -1,8 +1,8 @@
 package com.example.disastermesh.core.ble.repository
 
 import androidx.room.Transaction
-import com.example.disastermesh.core.MAX_MSG_CHARS
 import com.example.disastermesh.core.ble.GattManager
+import com.example.disastermesh.core.ble.MAX_MSG_CHARS
 import com.example.disastermesh.core.data.*
 import com.example.disastermesh.core.database.MessageType
 import com.example.disastermesh.core.database.dao.ChatDao

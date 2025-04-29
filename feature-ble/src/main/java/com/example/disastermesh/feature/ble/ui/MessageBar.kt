@@ -5,7 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.disastermesh.core.MAX_MSG_CHARS
+import com.example.disastermesh.core.ble.MAX_MSG_CHARS
 
 
 @Composable

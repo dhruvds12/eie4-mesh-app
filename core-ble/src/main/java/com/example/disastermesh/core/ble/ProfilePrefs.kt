@@ -2,34 +2,37 @@ package com.example.disastermesh.core.ble
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-/** lightweight DataStore wrapper for the user profile */
 object ProfilePrefs {
 
-    /* ---------- DataStore instance bound to Context ------------------ */
     private val Context.dataStore by preferencesDataStore(name = "profile")
 
-    /* ---------- preference keys -------------------------------------- */
-    private val KEY_NAME  = stringPreferencesKey("name")
-    private val KEY_PHONE = stringPreferencesKey("phone")
+    private val KEY_NAME   = stringPreferencesKey("name")
+    private val KEY_PHONE  = stringPreferencesKey("phone")
+    private val KEY_USERID = intPreferencesKey   ("uid")
 
-    /* ---------- public API ------------------------------------------- */
     suspend fun set(ctx: Context, name: String, phone: String) {
-        ctx.dataStore.edit { pref ->
-            pref[KEY_NAME]  = name
-            pref[KEY_PHONE] = phone
+        val uid = phoneToUserId(phone)
+        ctx.dataStore.edit {
+            it[KEY_NAME]   = name
+            it[KEY_PHONE]  = phone
+            it[KEY_USERID] = uid
         }
     }
 
-    /** Emits `null` until both fields are present, then Pair(name, phone). */
-    fun flow(ctx: Context): Flow<Pair<String,String>?> =
+    /** emits **null** until all three fields are present */
+    fun flow(ctx: Context): Flow<Profile?> =
         ctx.dataStore.data.map { p ->
-            val n  = p[KEY_NAME]
-            val ph = p[KEY_PHONE]
-            if (n == null || ph == null) null else n to ph
+            val n  = p[KEY_NAME]   ?: return@map null
+            val ph = p[KEY_PHONE]  ?: return@map null
+            val id = p[KEY_USERID] ?: return@map null
+            Profile(n, ph, id)
         }
+
+    data class Profile(val name: String, val phone: String, val uid: Int)
 }

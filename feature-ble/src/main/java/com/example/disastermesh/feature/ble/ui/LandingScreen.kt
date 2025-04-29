@@ -23,6 +23,11 @@ fun LandingScreen(
     vm : LandingViewModel = hiltViewModel()
 ) {
     val state by vm.connection.collectAsState()
+    val profile  by vm.profile.collectAsState()
+
+    /* ------------- greeting line ----------------------------------- */
+    val greeting = profile?.let { "Hi ${it.name}!" } ?: "Welcome"
+    val uidLine  = profile?.let { "User-ID: ${it.uid}" } ?: ""
 
     val connected = when (state) {
         GattConnectionEvent.ServicesDiscovered -> true
@@ -55,6 +60,9 @@ fun LandingScreen(
             verticalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterVertically),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Text(greeting, style = MaterialTheme.typography.headlineSmall)
+            if (uidLine.isNotEmpty())
+                Text(uidLine, style = MaterialTheme.typography.labelMedium)
 
             /* status text */
             Text(
@@ -106,6 +114,7 @@ fun LandingScreen(
 
             ChatTypeButton(
                 label = "User ↔ User",
+                enabled = profile != null
             ) {
                 nav.navigate(Screen.ChatList.route.replace("{type}", "USER"))
             }
