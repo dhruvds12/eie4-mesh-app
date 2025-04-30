@@ -58,7 +58,20 @@ class AndroidGattManager @Inject constructor(
                 trySend(evt)
                 _events.value = evt
 
-                if (evt == GattConnectionEvent.Connected) g.discoverServices()
+                if (evt == GattConnectionEvent.Connected) {
+                    val desired = 247                       // 247 byte limit on communication
+                    g.requestMtu(desired)
+                }
+
+            }
+
+            @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+            override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
+                if (status == BluetoothGatt.GATT_SUCCESS) {
+                    Log.i(TAG, "Negotiated MTU = $mtu")
+                }
+                // now it is safe to discover services
+                g.discoverServices()
             }
 
             @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)

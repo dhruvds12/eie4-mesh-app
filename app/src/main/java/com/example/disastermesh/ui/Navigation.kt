@@ -1,6 +1,7 @@
 package com.example.disastermesh.ui
 
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -13,13 +14,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.disastermesh.feature.disastermessage.ui.DisasterMessageScreen
 import com.example.disastermesh.feature.ble.BleScanScreen
 import com.example.disastermesh.feature.ble.BleChatScreen
 import com.example.disastermesh.feature.ble.ui.ChatListScreen
 import com.example.disastermesh.feature.ble.ui.LandingScreen
 import com.example.disastermesh.feature.ble.nav.Screen   // ← sealed-class routes
+import com.example.disastermesh.feature.ble.ui.DiscoveryScreen
+import com.example.disastermesh.feature.ble.ui.DiscoveryType
+import com.example.disastermesh.feature.ble.ui.ProfileScreen
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun MainNavigation() {
 
@@ -76,17 +80,20 @@ fun MainNavigation() {
             )
         }
 
-        /* ------------ legacy “main” screen keeps demo feature --------- */
-        composable("main-demo") {
-            Column(Modifier.padding(16.dp)) {
-                DisasterMessageScreen(modifier = Modifier.weight(1f))
-                Button(
-                    onClick = { navController.navigate(Screen.Landing.route) },
-                    modifier = Modifier.padding(top = 16.dp)
-                ) {
-                    Text("Go to Mesh Chat")
-                }
-            }
+
+        composable(
+            Screen.Discover.route,
+            arguments = listOf(navArgument("kind") { defaultValue = "NODE" })
+        ) { back ->
+            val kind = back.arguments?.getString("kind") ?: "NODE"
+            DiscoveryScreen(
+                type = if (kind == "NODE") DiscoveryType.NODE else DiscoveryType.USER,
+                nav  = navController
+            )
         }
+
+        composable(Screen.Profile.route) { ProfileScreen(navController) }
+
+
     }
 }

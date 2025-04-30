@@ -42,6 +42,8 @@ dependencies {
     // Coroutines for any Flow/async work in your scanner
     implementation(libs.kotlinx.coroutines.android)
 
-    // (Optional) If you wrap Android’s BLE APIs in wrapper libraries:
-    // implementation(libs.androidx.bluetooth)
+    implementation(platform(libs.androidx.compose.bom))
+    //TODO: Issue in preferences 1.1.5 use 1.1.4 for now then bring up later
+    implementation("androidx.datastore:datastore-preferences:1.1.4")
+
 }
