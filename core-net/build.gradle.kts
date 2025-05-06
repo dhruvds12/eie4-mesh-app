@@ -51,6 +51,7 @@ android {
 
 dependencies {
     implementation(project(":core-database"))
+    implementation(project(":core-ble"))
 
     // Arch Components
     implementation(libs.hilt.android)
@@ -68,5 +69,6 @@ dependencies {
     implementation(libs.okhttp)
 
     // --- Annotation libs already present via Hilt & coroutines ---
+    //noinspection UseTomlInstead
     implementation("com.google.code.gson:gson:2.11.0")
 }

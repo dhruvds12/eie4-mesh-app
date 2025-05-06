@@ -37,7 +37,27 @@ fun BleChatScreen(
         navController.getBackStackEntry(Screen.Landing.route)
     }
     val landingVm: LandingViewModel = hiltViewModel(landingEntry)
-    val connected by landingVm.connection.collectAsState()
+    val bleEvt     by landingVm.connection.collectAsState()
+    val uiState    by landingVm.ui.collectAsState()
+
+    val bleReady = when (bleEvt) {
+        GattConnectionEvent.ServicesDiscovered,
+        is GattConnectionEvent.WriteCompleted,
+        is GattConnectionEvent.CharacteristicRead -> true
+        else -> false
+    }
+
+    val isUserChat = remember(chatId) {            // low 8 bits = type
+        com.example.disastermesh.core.ble.idType(chatId) ==
+                com.example.disastermesh.core.database.MessageType.USER
+    }
+
+    val canSend = if (isUserChat) {
+        bleReady || uiState.internet               // internet OR BLE
+    } else {
+        bleReady                                   // broadcast / node
+    }
+
 
     val items by vm.items.collectAsState()
 
@@ -63,13 +83,6 @@ fun BleChatScreen(
                     is ChatItem.Bubble -> MessageBubble(item.msg)
                 }
             }
-        }
-
-        val canSend = when (connected) {
-            GattConnectionEvent.ServicesDiscovered     -> true
-            is GattConnectionEvent.WriteCompleted      -> true
-            is GattConnectionEvent.CharacteristicRead  -> true
-            else                                       -> false
         }
 
         Row(

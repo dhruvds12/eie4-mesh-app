@@ -38,4 +38,10 @@ object NetModule {
     @Provides @Singleton
     fun registerApi(retrofit: Retrofit): RegisterApi =
         retrofit.create(RegisterApi::class.java)
+
+    @Provides @Singleton
+    fun messageApi(retrofit: Retrofit): MessageApi =
+        retrofit.create(MessageApi::class.java)
+
 }
+

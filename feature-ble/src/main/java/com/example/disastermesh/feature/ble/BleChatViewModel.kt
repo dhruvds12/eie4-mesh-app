@@ -9,6 +9,8 @@ import com.example.disastermesh.core.ble.ProfilePrefs
 import com.example.disastermesh.core.ble.idType
 import com.example.disastermesh.core.ble.repository.MeshRepository
 import com.example.disastermesh.core.database.MessageType
+import com.example.disastermesh.core.net.ConnectivityObserver
+import com.example.disastermesh.core.net.UserNetRepository
 import com.example.disastermesh.feature.ble.ui.model.ChatItem
 import com.example.disastermesh.feature.ble.ui.model.withDateHeaders
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,10 +20,11 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/* feature-ble/BleChatViewModel.kt */
 @HiltViewModel
 class BleChatViewModel @Inject constructor(
-    private val repo: MeshRepository,
+    private val bleRepo: MeshRepository,
+    private val netRepo: UserNetRepository,
+    private val conn: ConnectivityObserver,
     @ApplicationContext ctx: Context
 ) : ViewModel() {
 
@@ -39,7 +42,7 @@ class BleChatViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.O)
     val items: StateFlow<List<ChatItem>> =
         chatId.filterNotNull()
-            .flatMapLatest { repo.stream(it) }
+            .flatMapLatest { bleRepo.stream(it) }
             .map { it.withDateHeaders() }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
@@ -58,7 +61,14 @@ class BleChatViewModel @Inject constructor(
                 else -> uidFlow.value ?: 0
             }
 
-            repo.send(cid, text, myUid)
+            if (currentType == MessageType.USER && conn.isOnline.first()) {
+                // route over HTTP gateway
+                val targetUid = (cid and 0xFFFF_FFFFL).toInt()
+                netRepo.send(myUid, targetUid, cid, text)
+            } else {
+                // broadcast / node / offline → BLE
+                bleRepo.send(cid, text, myUid)
+            }
         }
     }
 }

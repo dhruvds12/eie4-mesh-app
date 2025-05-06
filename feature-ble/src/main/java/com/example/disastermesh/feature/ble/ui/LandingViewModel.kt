@@ -8,6 +8,7 @@ import com.example.disastermesh.core.ble.GattManager
 import com.example.disastermesh.core.ble.ProfilePrefs
 import com.example.disastermesh.core.ble.encodeUserIdUpdate
 import com.example.disastermesh.core.net.ConnectivityObserver
+import com.example.disastermesh.core.net.UserNetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -19,6 +20,7 @@ import javax.inject.Inject
 class LandingViewModel @Inject constructor(
     private val gatt: GattManager,
     private val net: ConnectivityObserver,
+    private val netRepo: UserNetRepository,
     @ApplicationContext ctx: Context
 ) : ViewModel() {
 
@@ -37,6 +39,13 @@ class LandingViewModel @Inject constructor(
             .onEach { _connection.value = it }
             .launchIn(viewModelScope)
     }
+
+    init {
+        profileFlow.filterNotNull()
+            .onEach { p -> netRepo.start(p.uid, viewModelScope) }
+            .launchIn(viewModelScope)
+    }
+
 
     fun connect(addr: String) {
         if (connectJob?.isActive == true) return

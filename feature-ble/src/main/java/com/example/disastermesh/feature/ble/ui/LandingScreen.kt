@@ -110,7 +110,6 @@ fun LandingScreen(
 
             ChatTypeButton(
                 label = "Broadcast",
-                enabled = ui.bleConnected
             ) {
                 nav.navigate(
                     Screen.Chat.route
@@ -121,7 +120,6 @@ fun LandingScreen(
 
             ChatTypeButton(
                 label = "Node ↔ Node",
-                enabled = ui.bleConnected
             ) {
                 nav.navigate(Screen.ChatList.route.replace("{type}", "NODE"))
             }
