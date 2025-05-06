@@ -27,7 +27,7 @@ android {
     targetProjectPath = ":app"
 
     defaultConfig {
-        minSdk = 23
+        minSdk = 24
         targetSdk = 35
 
         testInstrumentationRunner = "com.example.disastermesh.core.testing.HiltTestRunner"

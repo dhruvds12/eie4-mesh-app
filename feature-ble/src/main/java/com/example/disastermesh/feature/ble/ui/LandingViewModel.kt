@@ -7,6 +7,7 @@ import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.core.ble.GattManager
 import com.example.disastermesh.core.ble.ProfilePrefs
 import com.example.disastermesh.core.ble.encodeUserIdUpdate
+import com.example.disastermesh.core.net.ConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
@@ -17,6 +18,7 @@ import javax.inject.Inject
 @HiltViewModel
 class LandingViewModel @Inject constructor(
     private val gatt: GattManager,
+    private val net: ConnectivityObserver,
     @ApplicationContext ctx: Context
 ) : ViewModel() {
 
@@ -55,5 +57,35 @@ class LandingViewModel @Inject constructor(
 
     fun disconnect() {
         gatt.disconnect()
+    }
+
+    // --------------- NET -------------------------
+
+    private val modeFlow = combine(
+        connection.map { evt ->                     // BLE connected?
+            evt == GattConnectionEvent.ServicesDiscovered ||
+                    evt is GattConnectionEvent.WriteCompleted
+        },
+        net.isOnline,                               // Internet reachable?
+        profileFlow.map { it != null }              // Profile present?
+    ) { ble, online, hasProfile ->
+        UiState(ble, online, hasProfile)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, UiState())
+
+    /** public read‑only */
+    val ui: StateFlow<UiState> = modeFlow
+}
+
+data class UiState(
+    val bleConnected: Boolean = false,
+    val internet: Boolean     = false,
+    val hasProfile: Boolean   = false
+) {
+    enum class Mode { BLE, NET, BOTH, OFF }
+    val mode: Mode get() = when {
+        bleConnected && internet -> Mode.BOTH
+        bleConnected            -> Mode.BLE
+        internet                -> Mode.NET
+        else                    -> Mode.OFF
     }
 }

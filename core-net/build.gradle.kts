@@ -22,7 +22,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.disastermesh.core.data"
+    namespace = "com.example.disastermesh.core.net"
     compileSdk = 35
 
     defaultConfig {
@@ -61,4 +61,12 @@ dependencies {
     // Local tests: jUnit, coroutines, Android runner
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    // --- Retrofit stack ---
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.okhttp)
+
+    // --- Annotation libs already present via Hilt & coroutines ---
+    implementation("com.google.code.gson:gson:2.11.0")
 }
