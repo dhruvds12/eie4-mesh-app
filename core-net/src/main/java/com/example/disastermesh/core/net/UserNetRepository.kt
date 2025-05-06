@@ -36,15 +36,15 @@ class UserNetRepository @Inject constructor(
     /* ---------- inbound polling -------------------------------------- */
 
     fun start(uid: Int, scope: CoroutineScope) {
-        if (pollJob?.isActive == true) return       // already running
+        if (pollJob?.isActive == true) return
 
         pollJob = scope.launch {
             conn.isOnline
                 .distinctUntilChanged()
                 .collectLatest { online ->
-                    if (!online) return@collectLatest          // wait for next ‘true’
+                    if (!online) return@collectLatest
 
-                    var since = 0L                             // Unix seconds
+                    var since = 0L                       // last server timestamp seen
                     while (isActive) {
                         val resp = runCatching {
                             api.sync(UserSyncReq("$uid", since))
@@ -52,8 +52,12 @@ class UserNetRepository @Inject constructor(
 
                         resp?.body()?.let { sync ->
                             insertDown(sync.down)
-                            since = System.currentTimeMillis() / 1000
+
+                            // pick the newest TS we got in *this* batch
+                            val maxTs = sync.down.maxOfOrNull { it.ts } ?: since
+                            since = maxOf(since, maxTs)
                         }
+
                         delay(5_000)
                     }
                 }
