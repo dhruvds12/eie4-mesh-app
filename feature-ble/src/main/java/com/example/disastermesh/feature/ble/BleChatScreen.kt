@@ -8,12 +8,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.disastermesh.core.ble.GattConnectionEvent
+import com.example.disastermesh.core.database.entities.Route
 import com.example.disastermesh.feature.ble.nav.Screen
 import com.example.disastermesh.feature.ble.ui.DateHeader
 import com.example.disastermesh.feature.ble.ui.MessageBubble
@@ -65,7 +67,31 @@ fun BleChatScreen(
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
 
-        Text(chatTitle, style = MaterialTheme.typography.titleMedium)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(chatTitle, style = MaterialTheme.typography.titleMedium)
+
+            val route by vm.currentRoute.collectAsState()
+            val gwAvail by remember { vm.bleRepo.gatewayAvailable}.collectAsState()
+
+            if (isUserChat && gwAvail) {   // && gwAvail
+                var expanded by remember { mutableStateOf(false) }
+                Box {
+                    AssistChip(
+                        onClick = { expanded = true },
+                        label   = { Text(if (route == Route.MESH) "Mesh" else "Gateway") }
+                    )
+                    DropdownMenu(expanded, { expanded = false }) {
+                        DropdownMenuItem(text = { Text("Mesh") },
+                            onClick = { expanded = false; vm.setRoute(Route.MESH) })
+                        DropdownMenuItem(text = { Text("Gateway") },
+                            onClick = { expanded = false; vm.setRoute(Route.GATEWAY) })
+                    }
+                }
+            }
+        }
 
         LazyColumn(
             Modifier.weight(1f),

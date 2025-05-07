@@ -1,7 +1,10 @@
 package com.example.disastermesh.core.ble.repository
 
 import com.example.disastermesh.core.database.MessageType
+import com.example.disastermesh.core.database.entities.Route
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 
 interface MeshRepository {
 
@@ -11,8 +14,15 @@ interface MeshRepository {
 
     fun stream(chatId: Long): Flow<List<com.example.disastermesh.core.database.entities.Message>>
 
+    val routeUpdates: SharedFlow<Pair<Long, Route>>
+    val gatewayAvailable: StateFlow<Boolean>
     val nodeList: Flow<List<Int>>
     val userList: Flow<List<Int>>
 
     suspend fun send(chatId: Long, body: String, myUserId: Int)
+    suspend fun sendGateway(chatId: Long, body: String, myUserId: Int)
+    suspend fun setRoute(cid: Long, r: Route)
+    suspend fun getRoute(cid: Long) : Route?
+
+
 }

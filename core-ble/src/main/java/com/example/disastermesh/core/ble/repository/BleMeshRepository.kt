@@ -12,6 +12,7 @@ import com.example.disastermesh.core.database.dao.ChatDao
 import com.example.disastermesh.core.database.entities.Chat
 import com.example.disastermesh.core.database.entities.Message
 import com.example.disastermesh.core.database.entities.MessageStatus
+import com.example.disastermesh.core.database.entities.Route
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -32,12 +33,22 @@ class BleMeshRepository @Inject constructor(
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
+    private val _gw = MutableStateFlow(false)
+    override val gatewayAvailable: StateFlow<Boolean> = _gw
+
+    private val _routeUpdates = MutableSharedFlow<Pair<Long, Route>>(extraBufferCapacity = 16)
+    override  val routeUpdates: SharedFlow<Pair<Long, Route>> = _routeUpdates   // VM listens
+
+
     init {
         gatt.incomingMessages()
             .mapNotNull { MessageCodec.decode(it) }
             .onEach  { obj ->
+
                 when (obj) {
-                    is ChatMessage   -> saveIncoming(obj)
+                    is GatewayAvailable -> _gw.value = true
+                    is GatewayChatMessage   -> persist(obj.inner, Route.GATEWAY)
+                    is ChatMessage          -> persist(obj, Route.MESH)
                     is ListResponse  -> when (obj.opcode) {
                         Opcode.LIST_NODES_RESP -> _nodeList.emit(obj.ids)
                         Opcode.LIST_USERS_RESP -> _userList.emit(obj.ids)
@@ -89,6 +100,18 @@ class BleMeshRepository @Inject constructor(
 
     }
 
+    @Transaction
+    override suspend fun sendGateway(chatId: Long, body: String, myUserId: Int) {
+        val type   = idType(chatId);  val target = idTarget(chatId)
+        require(type == MessageType.USER) { "gateway route only for user chats" }
+
+        val cm = ChatMessage(type, target, myUserId, body)
+        val msgId = dao.insert(Message(chatId = chatId, mine = true, body = body))
+
+        val ok = runCatching { gatt.sendMessage(MessageCodec.encodeGateway(cm)) }.isSuccess
+        dao.setStatus(msgId, if (ok) MessageStatus.SENT else MessageStatus.SENDING)
+    }
+
     suspend fun requestNodes() = gatt.sendMessage(
         MessageCodec.encodeListRequest(Opcode.LIST_NODES_REQ)
     )
@@ -104,8 +127,25 @@ class BleMeshRepository @Inject constructor(
 
     /* ---------------- helpers ------------------------- */
 
-    private suspend fun saveIncoming(cm: ChatMessage) {
+//    private suspend fun saveIncoming(cm: ChatMessage) {
+//        val cid = makeChatId(cm.type, cm.sender)
+//        dao.upsertChat(
+//            Chat(
+//                id    = cid,
+//                type  = cm.type,
+//                title = when (cm.type) {
+//                    MessageType.BROADCAST -> "Broadcast"
+//                    MessageType.NODE      -> "Node ${cm.sender}"
+//                    MessageType.USER      -> "User ${cm.sender}"
+//                }
+//            )
+//        )
+//        dao.insert(Message(chatId = cid, mine = false, body = cm.body))
+//    }
+
+    private suspend fun persist(cm: ChatMessage, newRoute: Route) {
         val cid = makeChatId(cm.type, cm.sender)
+
         dao.upsertChat(
             Chat(
                 id    = cid,
@@ -114,9 +154,26 @@ class BleMeshRepository @Inject constructor(
                     MessageType.BROADCAST -> "Broadcast"
                     MessageType.NODE      -> "Node ${cm.sender}"
                     MessageType.USER      -> "User ${cm.sender}"
-                }
+                },
+                route = newRoute
             )
         )
+
+        val prev = dao.getRoute(cid)
+        if (prev != newRoute) {
+            dao.setRoute(cid, newRoute)
+            if (newRoute == Route.GATEWAY) _routeUpdates.emit(cid to newRoute)
+        }
+
+
         dao.insert(Message(chatId = cid, mine = false, body = cm.body))
     }
+
+    override suspend fun setRoute(cid: Long, r: Route) {
+        dao.setRoute(cid, r)
+    }
+
+    override suspend fun getRoute(cid: Long): Route? = dao.getRoute(cid)
+
+
 }

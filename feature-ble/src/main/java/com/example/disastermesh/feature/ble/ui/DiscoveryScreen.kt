@@ -39,7 +39,7 @@ fun DiscoveryScreen(
             showDialog = false
             scope.launch {
                 val uid   = com.example.disastermesh.core.ble.phoneToUserId(phone)
-                val cid   = com.example.disastermesh.core.ble.makeChatId(
+                val cid   = makeChatId(
                     MessageType.USER, uid
                 )
                 vm.ensureChat(MessageType.USER, uid, "User $uid")

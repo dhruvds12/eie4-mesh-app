@@ -6,6 +6,7 @@ import com.example.disastermesh.core.database.entities.Chat
 import com.example.disastermesh.core.database.entities.Message
 import com.example.disastermesh.core.database.MessageType
 import com.example.disastermesh.core.database.entities.MessageStatus
+import com.example.disastermesh.core.database.entities.Route
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -29,4 +30,10 @@ interface ChatDao {
 
     @Query("UPDATE Message SET status = :s WHERE msgId = :id")
     suspend fun setStatus(id: Long, s: MessageStatus)
+
+    @Query("UPDATE Chat SET route = :r WHERE id = :cid")
+    suspend fun setRoute(cid: Long, r: Route)
+
+    @Query("SELECT route FROM Chat WHERE id = :cid")
+    suspend fun getRoute(cid: Long): Route?
 }
