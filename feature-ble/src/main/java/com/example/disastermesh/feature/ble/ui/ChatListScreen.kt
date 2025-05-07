@@ -26,6 +26,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.disastermesh.feature.ble.nav.Screen
 import com.example.disastermesh.core.database.entities.Chat
+import com.example.disastermesh.feature.ble.ui.model.NewUserChatDialog
 import kotlinx.coroutines.launch
 
 
@@ -59,35 +60,18 @@ fun ChatListScreen(
 
     /* --- dialog state ---------------------------------------------- */
     var showDialog by remember { mutableStateOf(false) }
-    var phoneInput by remember { mutableStateOf("") }
+//    var phoneInput by remember { mutableStateOf("") }
 
-    if (showDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showDialog = false },
-            confirmButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = {
-                        showDialog = false
-                        scope.launch { vm.createUserChat(phoneInput) }
-                    },
-                    enabled = phoneInput.startsWith("+") && phoneInput.length >= 4
-                ) { Text("Create") }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(
-                    onClick = { showDialog = false }
-                ) { Text("Cancel") }
-            },
-            title = { Text("New user chat") },
-            text  = {
-                androidx.compose.material3.OutlinedTextField(
-                    value = phoneInput,
-                    onValueChange = { phoneInput = it },
-                    label = { Text("Phone (+CC)") }
-                )
-            }
-        )
-    }
+
+    NewUserChatDialog(
+        show = showDialog,
+        onDismiss = { showDialog = false },
+        onCreate  = { phone ->
+            showDialog = false
+            scope.launch { vm.createUserChat(phone) }
+        }
+    )
+
 
     /* --- FAB logic -------------------------------------------------- */
     val isUserList     = type == "USER"
