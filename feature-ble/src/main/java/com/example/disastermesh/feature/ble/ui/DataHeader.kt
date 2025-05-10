@@ -1,4 +1,3 @@
-/* feature-ble/ui/DateHeader.kt */
 package com.example.disastermesh.feature.ble.ui
 
 import androidx.compose.foundation.layout.*

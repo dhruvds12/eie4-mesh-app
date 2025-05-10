@@ -18,7 +18,7 @@ import com.example.disastermesh.feature.ble.BleScanScreen
 import com.example.disastermesh.feature.ble.BleChatScreen
 import com.example.disastermesh.feature.ble.ui.ChatListScreen
 import com.example.disastermesh.feature.ble.ui.LandingScreen
-import com.example.disastermesh.feature.ble.nav.Screen   // ← sealed-class routes
+import com.example.disastermesh.feature.ble.nav.Screen
 import com.example.disastermesh.feature.ble.ui.DiscoveryScreen
 import com.example.disastermesh.feature.ble.ui.DiscoveryType
 import com.example.disastermesh.feature.ble.ui.ProfileScreen

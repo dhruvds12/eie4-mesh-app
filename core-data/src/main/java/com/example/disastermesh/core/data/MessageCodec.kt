@@ -12,13 +12,19 @@ enum class Opcode(val id: Int) {
     LIST_NODES_REQ    (0x05),
     LIST_USERS_REQ    (0x06),
     LIST_NODES_RESP   (0x07),
-    LIST_USERS_RESP   (0x08);
-
+    LIST_USERS_RESP   (0x08),
+    GATEWAY_AVAILABLE (0x09),      // node → app  (enables UI switch)
+    USER_MSG_GATEWAY  (0x0A);      // app  → node (send via gateway)
     companion object { fun fromId(i: Int) = entries.firstOrNull { it.id == i } }
 }
 
 /** Small helper for list replies */
 data class ListResponse(val opcode: Opcode, val ids: List<Int>)
+
+data object GatewayAvailable
+data class GatewayChatMessage(     // identical to ChatMessage but flagged
+    val inner: ChatMessage
+)
 
 
 /*
@@ -54,6 +60,9 @@ object MessageCodec {
         return buf.array()
     }
 
+    fun encodeGateway(cm: ChatMessage): ByteArray =
+        encode(cm).also { it[0] = Opcode.USER_MSG_GATEWAY.id.toByte() }
+
     /* --------------------------- decode -------------------------------- */
 
     fun decode(bytes: ByteArray): Any? = runCatching {
@@ -87,6 +96,21 @@ object MessageCodec {
                     sender = sender,
                     body   = String(payload, Charsets.UTF_8)
                 )
+            }
+
+            Opcode.USER_MSG_GATEWAY -> {
+                val dest   = buf.int
+                val sender = buf.int
+                val payload = ByteArray(buf.remaining())
+                buf.get(payload)
+                GatewayChatMessage(                         // wrapper tells repo to switch
+                    ChatMessage(MessageType.USER, dest, sender, String(payload))
+                )
+            }
+
+
+            Opcode.GATEWAY_AVAILABLE -> {
+                GatewayAvailable
             }
 
             else -> null

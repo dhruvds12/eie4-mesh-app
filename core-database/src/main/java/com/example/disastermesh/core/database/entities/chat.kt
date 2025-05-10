@@ -15,5 +15,7 @@ import com.example.disastermesh.core.database.MessageType
 data class Chat(
     @PrimaryKey val id: Long,
     val type : MessageType,
-    val title: String
+    val title: String,
+    val route: Route = Route.MESH
+
 )

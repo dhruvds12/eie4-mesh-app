@@ -23,6 +23,7 @@ fun LandingScreen(
     vm : LandingViewModel = hiltViewModel()
 ) {
     val state by vm.connection.collectAsState()
+    val ui         by vm.ui.collectAsState()
     val profile  by vm.profile.collectAsState()
 
     /* ------------- greeting line ----------------------------------- */
@@ -63,6 +64,17 @@ fun LandingScreen(
             Text(greeting, style = MaterialTheme.typography.headlineSmall)
             if (uidLine.isNotEmpty())
                 Text(uidLine, style = MaterialTheme.typography.labelMedium)
+
+            Text(
+                text = "Mode: " + when (ui.mode) {
+                    UiState.Mode.BOTH -> "Bluetooth + Internet"
+                    UiState.Mode.BLE  -> "Bluetooth only"
+                    UiState.Mode.NET  -> "Internet only"
+                    UiState.Mode.OFF  -> "Offline"
+                },
+                style = MaterialTheme.typography.labelMedium
+            )
+
 
             /* status text */
             Text(
@@ -114,7 +126,7 @@ fun LandingScreen(
 
             ChatTypeButton(
                 label = "User ↔ User",
-                enabled = profile != null
+                enabled = ui.hasProfile
             ) {
                 nav.navigate(Screen.ChatList.route.replace("{type}", "USER"))
             }

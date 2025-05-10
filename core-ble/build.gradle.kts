@@ -11,7 +11,7 @@ android {
     compileSdk  = 35
 
     defaultConfig {
-        minSdk                    = 23
+        minSdk                    = 24
         consumerProguardFiles("consumer-rules.pro")
         testInstrumentationRunner = "com.example.disastermesh.core.testing.HiltTestRunner"
     }

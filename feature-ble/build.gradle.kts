@@ -11,7 +11,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        minSdk = 23
+        minSdk = 24
 
         testInstrumentationRunner = "com.example.disastermesh.core.testing.HiltTestRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -41,6 +41,7 @@ dependencies {
     implementation(project(":core-ui"))
     implementation(project(":core-ble"))
     androidTestImplementation(project(":core-testing"))
+    implementation(project(":core-net"))
 
     implementation("androidx.compose.material:material-icons-extended:1.6.5")
     implementation("androidx.compose.foundation:foundation:1.4.0")
@@ -82,4 +83,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.runner)
 
     implementation("com.google.accompanist:accompanist-permissions:0.37.2")
+
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
 }

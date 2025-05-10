@@ -30,7 +30,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.disastermesh"
-        minSdk = 23
+        minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -69,7 +69,7 @@ android {
         shaders = false
     }
 
-    packagingOptions {
+    packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
