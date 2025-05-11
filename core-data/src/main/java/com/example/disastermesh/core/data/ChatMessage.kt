@@ -15,6 +15,7 @@ import com.example.disastermesh.core.database.MessageType
  *  On receive: dest is my ID and sender is the user id
  */
 data class ChatMessage(
+    val pktId: UInt,
     val type: MessageType,
     val dest: Int,  // could a user or a node -> check type
     val sender: Int, // could be a user or a node -> check type

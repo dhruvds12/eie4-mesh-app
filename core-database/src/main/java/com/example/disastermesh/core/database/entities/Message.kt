@@ -22,6 +22,7 @@ import androidx.room.PrimaryKey
 )
 data class Message(
     @PrimaryKey(autoGenerate = true) val msgId: Long = 0,
+    val pktId : Int? = null,
     val chatId : Long,
     val mine   : Boolean,                  // true = I sent it
     val ts     : Long = System.currentTimeMillis(),

@@ -46,6 +46,7 @@ class BleMeshRepository @Inject constructor(
             .onEach  { obj ->
 
                 when (obj) {
+                    is AckSuccess          -> dao.setStatusByPktId(obj.pktId.toInt(), MessageStatus.ACKED)
                     is GatewayAvailable -> _gw.value = true
                     is GatewayChatMessage   -> persist(obj.inner, Route.GATEWAY)
                     is ChatMessage          -> persist(obj, Route.MESH)
@@ -72,11 +73,11 @@ class BleMeshRepository @Inject constructor(
         }
         val type   = idType(chatId)
         val target = idTarget(chatId)
-
+        val pktId = (System.currentTimeMillis() and 0xFFFF_FFFFL).toUInt()
         val cm = when (type) {
-            MessageType.BROADCAST -> ChatMessage(type, 0,          0,      body)
-            MessageType.NODE      -> ChatMessage(type, target,     0,      body)
-            MessageType.USER      -> ChatMessage(type, target, myUserId, body)
+            MessageType.BROADCAST -> ChatMessage(pktId, type, 0,          0,      body)
+            MessageType.NODE      -> ChatMessage(pktId, type, target,     0,      body)
+            MessageType.USER      -> ChatMessage(pktId, type, target, myUserId, body)
         }
 
         val title = when (type) {
@@ -87,7 +88,7 @@ class BleMeshRepository @Inject constructor(
         dao.upsertChat(Chat(id = chatId, type = type, title = title))
 
         /* optimistic local insert */
-        val msgId = dao.insert(Message(chatId = chatId, mine = true, body = body))
+        val msgId = dao.insert(Message(chatId = chatId, mine = true, body = body, pktId = pktId.toInt(), status = MessageStatus.SENDING))
 
         val ok = runCatching {
             gatt.sendMessage(MessageCodec.encode(cm))
@@ -104,9 +105,9 @@ class BleMeshRepository @Inject constructor(
     override suspend fun sendGateway(chatId: Long, body: String, myUserId: Int) {
         val type   = idType(chatId);  val target = idTarget(chatId)
         require(type == MessageType.USER) { "gateway route only for user chats" }
-
-        val cm = ChatMessage(type, target, myUserId, body)
-        val msgId = dao.insert(Message(chatId = chatId, mine = true, body = body))
+        val pktId = (System.currentTimeMillis() and 0xFFFF_FFFFL).toUInt()
+        val cm = ChatMessage(pktId, type, target, myUserId, body)
+        val msgId = dao.insert(Message(chatId = chatId, mine = true, body = body, pktId = pktId.toInt(), status = MessageStatus.SENDING))
 
         val ok = runCatching { gatt.sendMessage(MessageCodec.encodeGateway(cm)) }.isSuccess
         dao.setStatus(msgId, if (ok) MessageStatus.SENT else MessageStatus.SENDING)
@@ -166,7 +167,7 @@ class BleMeshRepository @Inject constructor(
         }
 
 
-        dao.insert(Message(chatId = cid, mine = false, body = cm.body))
+        dao.insert(Message(chatId = cid, mine = false, body = cm.body, pktId  = cm.pktId.toInt(),))
     }
 
     override suspend fun setRoute(cid: Long, r: Route) {

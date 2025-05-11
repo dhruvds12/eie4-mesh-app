@@ -9,7 +9,7 @@ import com.example.disastermesh.core.database.entities.Message
 
 @Database(
     entities = [Chat::class, Message::class],
-    version  = 3,
+    version  = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)

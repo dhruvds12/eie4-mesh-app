@@ -94,7 +94,7 @@ private fun StatusIcon(s: MessageStatus) {
         MessageStatus.ACKED   -> Icons.Outlined.DoneAll
     }
     val tint = when (s) {
-        MessageStatus.ACKED -> MaterialTheme.colorScheme.secondary
+        MessageStatus.ACKED -> MaterialTheme.colorScheme.onPrimary
         else                -> MaterialTheme.colorScheme.onPrimary.copy(alpha = .7f)
     }
     Icon(icon, null, tint = tint, modifier = Modifier.size(14.dp))

@@ -14,7 +14,8 @@ enum class Opcode(val id: Int) {
     LIST_NODES_RESP   (0x07),
     LIST_USERS_RESP   (0x08),
     GATEWAY_AVAILABLE (0x09),      // node → app  (enables UI switch)
-    USER_MSG_GATEWAY  (0x0A);      // app  → node (send via gateway)
+    USER_MSG_GATEWAY  (0x0A),      // app  → node (send via gateway)
+    ACK_SUCCESS       (0x0C);
     companion object { fun fromId(i: Int) = entries.firstOrNull { it.id == i } }
 }
 
@@ -50,10 +51,11 @@ object MessageCodec {
 
     fun encode(msg: ChatMessage): ByteArray {
         val body = msg.body.toByteArray(Charsets.UTF_8)
-        val buf  = ByteBuffer.allocate(1 + 4 + 4 + body.size)
+        val buf  = ByteBuffer.allocate(1 + 4 + 4 + 4 + body.size)
             .order(ByteOrder.LITTLE_ENDIAN)
 
         buf.put(msg.type.id.toByte())
+        buf.putInt(msg.pktId.toInt())
         buf.putInt(msg.dest)
         buf.putInt(msg.sender)
         buf.put(body)
@@ -66,13 +68,15 @@ object MessageCodec {
     /* --------------------------- decode -------------------------------- */
 
     fun decode(bytes: ByteArray): Any? = runCatching {
+        if (bytes.isEmpty()) return null
         val buf = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
-        if (buf.remaining() < 9) return null            // header incomplete
+        val op = Opcode.fromId(buf.get().toInt()) ?: return null
 
-        when (val op = Opcode.fromId(buf.get().toInt())) {
+        when (op) {
 
             Opcode.LIST_NODES_RESP, Opcode.LIST_USERS_RESP -> {
                 /* skip dest / sender (2 × 4 B) */
+                if (buf.remaining() < 12) return null
                 buf.int; buf.int
                 if (buf.remaining() < 4) return null
                 val n = buf.int
@@ -81,12 +85,22 @@ object MessageCodec {
                 ListResponse(op, list)
             }
 
+            Opcode.ACK_SUCCESS -> {
+                if (buf.remaining() < 4) return null
+                println("Received ACK")
+                val pid = buf.int.toUInt()
+                AckSuccess(pid)
+            }
+
             Opcode.BROADCAST, Opcode.NODE_MSG, Opcode.USER_MSG -> {
+                if (buf.remaining() < 12) return null      // pktId + dest + sender
+                val pid    = buf.int.toUInt()
                 val dest   = buf.int
                 val sender = buf.int
                 val payload = ByteArray(buf.remaining())
                 buf.get(payload)
                 ChatMessage(
+                    pktId  = pid,
                     type   = when (op) {
                         Opcode.BROADCAST -> MessageType.BROADCAST
                         Opcode.NODE_MSG  -> MessageType.NODE
@@ -99,12 +113,20 @@ object MessageCodec {
             }
 
             Opcode.USER_MSG_GATEWAY -> {
+                if (buf.remaining() < 12) return null
+                val pid    = buf.int.toUInt()
                 val dest   = buf.int
                 val sender = buf.int
                 val payload = ByteArray(buf.remaining())
                 buf.get(payload)
                 GatewayChatMessage(                         // wrapper tells repo to switch
-                    ChatMessage(MessageType.USER, dest, sender, String(payload))
+                    ChatMessage(
+                        pktId  = pid,
+                        type   = MessageType.USER,
+                        dest   = dest,
+                        sender = sender,
+                        body   = String(payload, Charsets.UTF_8)
+                    )
                 )
             }
 
@@ -112,6 +134,8 @@ object MessageCodec {
             Opcode.GATEWAY_AVAILABLE -> {
                 GatewayAvailable
             }
+
+
 
             else -> null
         }

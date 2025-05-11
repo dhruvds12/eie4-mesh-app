@@ -36,4 +36,7 @@ interface ChatDao {
 
     @Query("SELECT route FROM Chat WHERE id = :cid")
     suspend fun getRoute(cid: Long): Route?
+
+    @Query("UPDATE Message SET status = :s WHERE pktId = :pid")
+    suspend fun setStatusByPktId(pid: Int, s: MessageStatus)
 }
