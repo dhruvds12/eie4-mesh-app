@@ -15,7 +15,11 @@ enum class Opcode(val id: Int) {
     LIST_USERS_RESP   (0x08),
     GATEWAY_AVAILABLE (0x09),      // node → app  (enables UI switch)
     USER_MSG_GATEWAY  (0x0A),      // app  → node (send via gateway)
-    ACK_SUCCESS       (0x0C);
+    ACK_SUCCESS       (0x0C),
+    BLE_PUBKEY_RESP       (0x0F),     // node → app – 32 B public-key of user
+    BLE_REQUEST_PUBKEY     (0x0E);     // app → node – “give me user X”
+    //    ANNOUNCE_KEY      (0x0D),     // app → node – my 32 B public key
+//    ENC_USER_MSG      (0x11);     // user↔user ciphertext
     companion object { fun fromId(i: Int) = entries.firstOrNull { it.id == i } }
 }
 
@@ -26,7 +30,6 @@ data object GatewayAvailable
 data class GatewayChatMessage(     // identical to ChatMessage but flagged
     val inner: ChatMessage
 )
-
 
 /*
 Message types:
@@ -64,6 +67,16 @@ object MessageCodec {
 
     fun encodeGateway(cm: ChatMessage): ByteArray =
         encode(cm).also { it[0] = Opcode.USER_MSG_GATEWAY.id.toByte() }
+
+
+    fun encodeRequestPubKey(targetUid: Int): ByteArray =
+        ByteBuffer.allocate(1 + 4 + 4)             // header only
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .apply {
+                put(Opcode.BLE_REQUEST_PUBKEY.id.toByte())
+                putInt(targetUid)      // dest = user we need the key for
+                putInt(0)              // sender = 0   (ignored by node)
+            }.array()
 
     /* --------------------------- decode -------------------------------- */
 
@@ -136,8 +149,18 @@ object MessageCodec {
             }
 
 
+            Opcode.BLE_PUBKEY_RESP -> {             //  ← NEW
+                if (buf.remaining() < 40) return null   // dest+sender+32 B key
+                val uid = buf.int                      // dest = owner of key
+                buf.int                                // sender (ignored)
+                val key = ByteArray(32)
+                buf.get(key)
+                PubKeyResp(uid, key)
+            }
 
             else -> null
         }
     }.getOrNull()
 }
+
+

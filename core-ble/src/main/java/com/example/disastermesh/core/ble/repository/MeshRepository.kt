@@ -24,5 +24,13 @@ interface MeshRepository {
     suspend fun setRoute(cid: Long, r: Route)
     suspend fun getRoute(cid: Long) : Route?
 
+    /* -------- new key-management API ------------------------------- */
+    fun publicKeyFlow(userId: Int): Flow<ByteArray?>
+    suspend fun requestPublicKey(userId: Int)
+
+    /* -------- per-chat encryption flag ----------------------------- */
+    fun encryptedFlow(chatId: Long): Flow<Boolean>
+    suspend fun setEncrypted(chatId: Long, on: Boolean)
+
 
 }

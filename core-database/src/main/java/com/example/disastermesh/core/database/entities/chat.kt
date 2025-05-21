@@ -16,6 +16,6 @@ data class Chat(
     @PrimaryKey val id: Long,
     val type : MessageType,
     val title: String,
-    val route: Route = Route.MESH
-
+    val route: Route = Route.MESH,
+    val encrypted: Boolean = false
 )

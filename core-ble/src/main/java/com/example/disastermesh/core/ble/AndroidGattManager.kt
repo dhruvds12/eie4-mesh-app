@@ -11,6 +11,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import java.io.IOException
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton

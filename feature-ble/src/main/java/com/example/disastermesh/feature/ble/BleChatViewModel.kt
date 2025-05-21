@@ -38,6 +38,35 @@ class BleChatViewModel @Inject constructor(
     val currentRoute: StateFlow<Route> = _currentRoute
 
     private val chatId = MutableStateFlow<Long?>(null)
+    private val targetUidFlow = chatId.map { cid ->
+        cid?.let { if (idType(it) == MessageType.USER)  (it and 0xFFFF_FFFFL).toInt() else null }
+    }
+
+    /* --------- encryption flag ----------------------------------- */
+    val encrypted: StateFlow<Boolean> = chatId.filterNotNull()
+        .flatMapLatest { bleRepo.encryptedFlow(it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /* whether we ALREADY have the remote user’s key */
+    private val hasKeyFlow: StateFlow<Boolean> =
+        targetUidFlow.flatMapLatest { uid ->
+            uid?.let { bleRepo.publicKeyFlow(it) } ?: flowOf(null)
+        }.map { it != null }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /* --------- public helpers ------------------------------------ */
+    fun toggleEncryption(on: Boolean, requestIfMissing: () -> Unit) = viewModelScope.launch {
+        val cid = chatId.value ?: return@launch
+        if (on && !hasKeyFlow.value) {
+            requestIfMissing()
+        } else {
+            bleRepo.setEncrypted(cid, on)
+        }
+    }
+
+    fun requestKey() = viewModelScope.launch {
+        targetUidFlow.first()?.let { bleRepo.requestPublicKey(it) }  //TODO was previously targetUidFlow.value
+    }
 
     init {
         /* when chat changes, load route once */

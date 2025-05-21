@@ -1,4 +1,3 @@
-/* feature-ble/chat/BleChatScreen.kt */
 package com.example.disastermesh.feature.ble
 
 import android.os.Build
@@ -22,6 +21,10 @@ import com.example.disastermesh.feature.ble.ui.MessageBubble
 import com.example.disastermesh.feature.ble.ui.model.ChatItem
 import com.example.disastermesh.feature.ble.ui.LandingViewModel
 import com.example.disastermesh.feature.ble.ui.MessageBar
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -66,6 +69,12 @@ fun BleChatScreen(
     var draft by remember { mutableStateOf("") }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
+        val encrypted by vm.encrypted.collectAsState()
+        val hasKey    by remember {                       // flows only valid for USER chats
+            derivedStateOf { vm.encrypted.value || !isUserChat }
+        }
+
+        var showNoKeyDialog by remember { mutableStateOf(false) }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -91,6 +100,41 @@ fun BleChatScreen(
                     }
                 }
             }
+
+            if (isUserChat) {
+                AssistChip(
+                    onClick = {
+                        vm.toggleEncryption(!encrypted) {
+                            showNoKeyDialog = true        // callback if key missing
+                        }
+                    },
+                    label = { Text(if (encrypted) "Encrypted" else "Encrypt") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (encrypted) Icons.Default.Lock else Icons.Default.LockOpen,
+                            contentDescription = null
+                        )
+                    }
+                )
+            }
+        }
+
+        if (showNoKeyDialog) {
+            AlertDialog(
+                onDismissRequest = { showNoKeyDialog = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        vm.requestKey()
+                        showNoKeyDialog = false
+                    }) { Text("Proceed") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNoKeyDialog = false }) { Text("Cancel") }
+                },
+                title   = { Text("Public key not available") },
+                text    = { Text("The chat will remain un-encrypted until the key " +
+                        "is retrieved from the mesh. Continue?") }
+            )
         }
 
         LazyColumn(

@@ -3,6 +3,7 @@ package com.example.disastermesh.core.database
 import android.content.Context
 import androidx.room.Room
 import com.example.disastermesh.core.database.dao.ChatDao
+import com.example.disastermesh.core.database.dao.PublicKeyDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,4 +23,7 @@ object DbModule {
 
     @Provides
     fun provideChatDao(db: MeshDb): ChatDao = db.chatDao()
+
+    @Provides
+    fun publicKeyDao(db: MeshDb): PublicKeyDao = db.publicKeyDao()
 }
