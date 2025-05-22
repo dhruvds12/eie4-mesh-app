@@ -7,6 +7,8 @@ import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.core.ble.GattManager
 import com.example.disastermesh.core.ble.ProfilePrefs
 import com.example.disastermesh.core.ble.encodeUserIdUpdate
+import com.example.disastermesh.core.crypto.CryptoBox
+import com.example.disastermesh.core.data.MessageCodec
 import com.example.disastermesh.core.net.ConnectivityObserver
 import com.example.disastermesh.core.net.UserNetRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,7 +23,7 @@ class LandingViewModel @Inject constructor(
     private val gatt: GattManager,
     private val net: ConnectivityObserver,
     private val netRepo: UserNetRepository,
-    @ApplicationContext ctx: Context
+    @ApplicationContext val ctx: Context
 ) : ViewModel() {
 
     private val _connection = MutableStateFlow<GattConnectionEvent?>(null)
@@ -56,7 +58,12 @@ class LandingViewModel @Inject constructor(
                 if (evt == GattConnectionEvent.ServicesDiscovered) {
                     /* first moment the link is ready – push USER_ID_UPDATE */
                     profileFlow.value?.let { p ->
-                        gatt.sendMessage(encodeUserIdUpdate(p.uid))
+//                        gatt.sendMessage(encodeUserIdUpdate(p.uid))
+
+                        val pk32 = CryptoBox.ensureKeyPair(p.uid, ctx)
+                        gatt.sendMessage(
+                            MessageCodec.encodeAnnounceKey(p.uid, pk32)
+                        )
                     }
                 }
             }

@@ -25,6 +25,13 @@ android {
     namespace = "com.example.disastermesh.core.crypto"
     compileSdk = 35
 
+    packaging {
+        resources {
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
+    }
+
+
     defaultConfig {
         minSdk = 24
 
@@ -47,9 +54,14 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
+
 }
 
 dependencies {
+    // light-weight BouncyCastle for X25519 + ChaCha20-Poly1305
+    implementation(libs.bcprov.jdk18on)
+    // AndroidX secure prefs for private-key alias bookkeeping
+    implementation(libs.androidx.security.crypto)
 
     // Arch Components
     implementation(libs.hilt.android)
@@ -61,10 +73,6 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
 
-    // --- Retrofit stack ---
-    implementation(libs.retrofit)
-    implementation(libs.converter.gson)
-    implementation(libs.okhttp)
 
     // --- Annotation libs already present via Hilt & coroutines ---
     //noinspection UseTomlInstead

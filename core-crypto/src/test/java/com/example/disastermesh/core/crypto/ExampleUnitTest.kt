@@ -1,4 +1,4 @@
-package com.example.core_crypto
+package com.example.disastermesh.core.crypto
 
 import org.junit.Test
 

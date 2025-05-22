@@ -5,22 +5,25 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 enum class Opcode(val id: Int) {
-    BROADCAST         (0x01),
-    NODE_MSG          (0x02),
-    USER_MSG          (0x03),
-    USER_ID_UPDATE    (0x04),
-    LIST_NODES_REQ    (0x05),
-    LIST_USERS_REQ    (0x06),
-    LIST_NODES_RESP   (0x07),
-    LIST_USERS_RESP   (0x08),
-    GATEWAY_AVAILABLE (0x09),      // node → app  (enables UI switch)
-    USER_MSG_GATEWAY  (0x0A),      // app  → node (send via gateway)
-    ACK_SUCCESS       (0x0C),
-    BLE_PUBKEY_RESP       (0x0F),     // node → app – 32 B public-key of user
-    BLE_REQUEST_PUBKEY     (0x0E);     // app → node – “give me user X”
-    //    ANNOUNCE_KEY      (0x0D),     // app → node – my 32 B public key
-//    ENC_USER_MSG      (0x11);     // user↔user ciphertext
-    companion object { fun fromId(i: Int) = entries.firstOrNull { it.id == i } }
+    BROADCAST(0x01),
+    NODE_MSG(0x02),
+    USER_MSG(0x03),
+    USER_ID_UPDATE(0x04),
+    LIST_NODES_REQ(0x05),
+    LIST_USERS_REQ(0x06),
+    LIST_NODES_RESP(0x07),
+    LIST_USERS_RESP(0x08),
+    GATEWAY_AVAILABLE(0x09),      // node → app  (enables UI switch)
+    USER_MSG_GATEWAY(0x0A),      // app  → node (send via gateway)
+    ACK_SUCCESS(0x0C),
+    ANNOUNCE_KEY(0x0D),     // app → node – my 32 B public key
+    BLE_PUBKEY_RESP(0x0F),     // node → app – 32 B public-key of user
+    BLE_REQUEST_PUBKEY(0x0E),     // app → node – “give me user X”
+    ENC_USER_MSG      (0x11);     // user↔user ciphertext
+
+    companion object {
+        fun fromId(i: Int) = entries.firstOrNull { it.id == i }
+    }
 }
 
 /** Small helper for list replies */
@@ -54,7 +57,7 @@ object MessageCodec {
 
     fun encode(msg: ChatMessage): ByteArray {
         val body = msg.body.toByteArray(Charsets.UTF_8)
-        val buf  = ByteBuffer.allocate(1 + 4 + 4 + 4 + body.size)
+        val buf = ByteBuffer.allocate(1 + 4 + 4 + 4 + body.size)
             .order(ByteOrder.LITTLE_ENDIAN)
 
         buf.put(msg.type.id.toByte())
@@ -77,6 +80,30 @@ object MessageCodec {
                 putInt(targetUid)      // dest = user we need the key for
                 putInt(0)              // sender = 0   (ignored by node)
             }.array()
+
+    fun encodeAnnounceKey(myUid: Int, pk32: ByteArray): ByteArray =
+        ByteBuffer.allocate(1 + 4 + 4 + 32)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .apply {
+                put(Opcode.ANNOUNCE_KEY.id.toByte())
+                putInt(0)        // dest = 0  (node distributes)
+                putInt(myUid)    // sender = me
+                put(pk32)
+            }.array()
+
+    fun encodeEncUserMsg(
+        pid: UInt,
+        destUid: Int,
+        senderUid: Int,
+        cipher: ByteArray
+    ): ByteArray = ByteBuffer.allocate(1 + 4 + 4 + 4 + cipher.size)
+        .order(ByteOrder.LITTLE_ENDIAN).apply {
+            put(Opcode.ENC_USER_MSG.id.toByte())
+            putInt(pid.toInt())
+            putInt(destUid)
+            putInt(senderUid)
+            put(cipher)
+        }.array()
 
     /* --------------------------- decode -------------------------------- */
 
@@ -107,38 +134,38 @@ object MessageCodec {
 
             Opcode.BROADCAST, Opcode.NODE_MSG, Opcode.USER_MSG -> {
                 if (buf.remaining() < 12) return null      // pktId + dest + sender
-                val pid    = buf.int.toUInt()
-                val dest   = buf.int
+                val pid = buf.int.toUInt()
+                val dest = buf.int
                 val sender = buf.int
                 val payload = ByteArray(buf.remaining())
                 buf.get(payload)
                 ChatMessage(
-                    pktId  = pid,
-                    type   = when (op) {
+                    pktId = pid,
+                    type = when (op) {
                         Opcode.BROADCAST -> MessageType.BROADCAST
-                        Opcode.NODE_MSG  -> MessageType.NODE
-                        else             -> MessageType.USER
+                        Opcode.NODE_MSG -> MessageType.NODE
+                        else -> MessageType.USER
                     },
-                    dest   = dest,
+                    dest = dest,
                     sender = sender,
-                    body   = String(payload, Charsets.UTF_8)
+                    body = String(payload, Charsets.UTF_8)
                 )
             }
 
             Opcode.USER_MSG_GATEWAY -> {
                 if (buf.remaining() < 12) return null
-                val pid    = buf.int.toUInt()
-                val dest   = buf.int
+                val pid = buf.int.toUInt()
+                val dest = buf.int
                 val sender = buf.int
                 val payload = ByteArray(buf.remaining())
                 buf.get(payload)
                 GatewayChatMessage(                         // wrapper tells repo to switch
                     ChatMessage(
-                        pktId  = pid,
-                        type   = MessageType.USER,
-                        dest   = dest,
+                        pktId = pid,
+                        type = MessageType.USER,
+                        dest = dest,
                         sender = sender,
-                        body   = String(payload, Charsets.UTF_8)
+                        body = String(payload, Charsets.UTF_8)
                     )
                 )
             }
@@ -156,6 +183,16 @@ object MessageCodec {
                 val key = ByteArray(32)
                 buf.get(key)
                 PubKeyResp(uid, key)
+            }
+
+            Opcode.ENC_USER_MSG -> {
+                println("ENC_USER_MSG")
+                if (buf.remaining() < 12) return null
+                val pid    = buf.int.toUInt()
+                val dest   = buf.int
+                val sender = buf.int
+                val rest   = ByteArray(buf.remaining()); buf.get(rest)
+                EncChatMessage(pid, dest, sender, rest)
             }
 
             else -> null
