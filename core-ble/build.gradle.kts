@@ -34,6 +34,7 @@ dependencies {
     implementation(project(":core-database"))
     implementation(project(":core-database"))
     implementation(project(":core-data"))
+    implementation(project(":core-crypto"))
     // Hilt for DI
     implementation(libs.hilt.android)
     implementation(libs.androidx.room.common.jvm)

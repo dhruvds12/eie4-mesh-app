@@ -38,6 +38,35 @@ class BleChatViewModel @Inject constructor(
     val currentRoute: StateFlow<Route> = _currentRoute
 
     private val chatId = MutableStateFlow<Long?>(null)
+    private val targetUidFlow = chatId.map { cid ->
+        cid?.let { if (idType(it) == MessageType.USER)  (it and 0xFFFF_FFFFL).toInt() else null }
+    }
+
+    /* --------- encryption flag ----------------------------------- */
+    val encrypted: StateFlow<Boolean> = chatId.filterNotNull()
+        .flatMapLatest { bleRepo.encryptedFlow(it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /* whether we ALREADY have the remote user’s key */
+    private val hasKeyFlow: StateFlow<Boolean> =
+        targetUidFlow.flatMapLatest { uid ->
+            uid?.let { bleRepo.publicKeyFlow(it) } ?: flowOf(null)
+        }.map { it != null }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    /* --------- public helpers ------------------------------------ */
+    fun toggleEncryption(on: Boolean, requestIfMissing: () -> Unit) = viewModelScope.launch {
+        val cid = chatId.value ?: return@launch
+        if (on && !hasKeyFlow.value) {
+            requestIfMissing()
+        } else {
+            bleRepo.setEncrypted(cid, on)
+        }
+    }
+
+    fun requestKey() = viewModelScope.launch {
+        targetUidFlow.first()?.let { bleRepo.requestPublicKey(it) }  //TODO was previously targetUidFlow.value
+    }
 
     init {
         /* when chat changes, load route once */
@@ -87,13 +116,16 @@ class BleChatViewModel @Inject constructor(
 
             if (currentType == MessageType.USER && conn.isOnline.first()) {
                 // route over HTTP gateway
+                println("sending via HTTP gateway")
                 val targetUid = (cid and 0xFFFF_FFFFL).toInt()
                 netRepo.send(myUid, targetUid, cid, text)
             } else if (currentType == MessageType.USER && _currentRoute.value == Route.GATEWAY) {
                 // Send via an internet gateway
+                println("sending via gateway")
                 bleRepo.sendGateway(cid, text, myUid)
             } else {
                 // broadcast / node / offline → BLE
+                println("sending via BLE")
                 bleRepo.send(cid, text, myUid)
             }
         }

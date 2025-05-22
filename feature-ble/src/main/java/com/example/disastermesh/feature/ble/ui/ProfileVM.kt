@@ -27,8 +27,12 @@ class ProfileVm @Inject constructor(
     fun save(name: String, phone: String) = viewModelScope.launch {
         val trimmedName  = name.trim()
         val trimmedPhone = phone.trim()
-        val uid          = phoneToUserId(trimmedPhone).toString()
-        val body = RegisterReq(uid, trimmedPhone.filter { it.isDigit() }, trimmedName)
+        val uid          = phoneToUserId(trimmedPhone)
+
+        val pub32 = com.example.disastermesh.core.crypto.CryptoBox
+            .ensureKeyPair(uid, ctx)
+
+        val body = RegisterReq(uid.toString(), trimmedPhone.filter { it.isDigit() }, trimmedName)
 
         runCatching { api.register(body) }
             .onSuccess { rsp ->

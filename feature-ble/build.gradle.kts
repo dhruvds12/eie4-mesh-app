@@ -42,6 +42,7 @@ dependencies {
     implementation(project(":core-ble"))
     androidTestImplementation(project(":core-testing"))
     implementation(project(":core-net"))
+    implementation(project(":core-crypto"))
 
     implementation("androidx.compose.material:material-icons-extended:1.6.5")
     implementation("androidx.compose.foundation:foundation:1.4.0")
