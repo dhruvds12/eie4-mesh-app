@@ -8,6 +8,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import java.io.IOException
@@ -34,7 +35,11 @@ class AndroidGattManager @Inject constructor(
 
 
 
-    private val incoming = MutableSharedFlow<ByteArray>(replay = 1)
+    private val incoming = MutableSharedFlow<ByteArray>(
+        replay              = 64,               // no single-item replay cache
+        extraBufferCapacity = 64,              // hold up to 64 packets
+        onBufferOverflow    = BufferOverflow.DROP_OLDEST
+    )
 
     /* --------------------------------------------------------------------- */
     /*  connection                                                           */
