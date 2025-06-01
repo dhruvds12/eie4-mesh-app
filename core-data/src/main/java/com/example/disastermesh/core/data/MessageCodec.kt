@@ -72,13 +72,13 @@ object MessageCodec {
         encode(cm).also { it[0] = Opcode.USER_MSG_GATEWAY.id.toByte() }
 
 
-    fun encodeRequestPubKey(targetUid: Int): ByteArray =
+    fun encodeRequestPubKey(targetUid: Int, myUid: Int): ByteArray =
         ByteBuffer.allocate(1 + 4 + 4)             // header only
             .order(ByteOrder.LITTLE_ENDIAN)
             .apply {
                 put(Opcode.BLE_REQUEST_PUBKEY.id.toByte())
                 putInt(targetUid)      // dest = user we need the key for
-                putInt(0)              // sender = 0   (ignored by node)
+                putInt(myUid)              // sender = our userID
             }.array()
 
     fun encodeAnnounceKey(myUid: Int, pk32: ByteArray): ByteArray =

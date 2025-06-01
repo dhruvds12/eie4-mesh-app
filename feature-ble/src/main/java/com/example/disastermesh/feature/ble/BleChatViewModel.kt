@@ -2,6 +2,7 @@ package com.example.disastermesh.feature.ble
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,7 +66,21 @@ class BleChatViewModel @Inject constructor(
     }
 
     fun requestKey() = viewModelScope.launch {
-        targetUidFlow.first()?.let { bleRepo.requestPublicKey(it) }  //TODO was previously targetUidFlow.value
+        val cid = chatId.value ?: return@launch
+        val currentType  = idType(cid)
+
+        // Very defensive code
+        if (currentType != MessageType.USER) {
+            Log.w("BleChatViewModel", "requestKey called for non-USER message type: $currentType")
+            return@launch
+        }
+
+        val myUid = uidFlow.value ?: run {
+            Log.e("BleChatViewModel", "requestKey: uidFlow.value is null for a USER message.")
+            return@launch
+        }
+
+        targetUidFlow.first()?.let { targetUid -> bleRepo.requestPublicKey(targetUid, myUid) }
     }
 
     init {

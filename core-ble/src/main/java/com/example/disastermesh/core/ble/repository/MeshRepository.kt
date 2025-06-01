@@ -26,7 +26,7 @@ interface MeshRepository {
 
     /* -------- new key-management API ------------------------------- */
     fun publicKeyFlow(userId: Int): Flow<ByteArray?>
-    suspend fun requestPublicKey(userId: Int)
+    suspend fun requestPublicKey(targetUid: Int, myUserId: Int)
 
     /* -------- per-chat encryption flag ----------------------------- */
     fun encryptedFlow(chatId: Long): Flow<Boolean>
