@@ -83,8 +83,8 @@ class BleMeshRepository @Inject constructor(
 
     override fun publicKeyFlow(userId: Int) = pkDao.keyFlow(userId)
 
-    override suspend fun requestPublicKey(userId: Int) {
-        gatt.sendMessage(MessageCodec.encodeRequestPubKey(userId))
+    override suspend fun requestPublicKey(targetUid: Int, myUserId: Int) {
+        gatt.sendMessage(MessageCodec.encodeRequestPubKey(targetUid, myUserId))
     }
 
     /* ---------- encryption flag helpers --------------------------- */
