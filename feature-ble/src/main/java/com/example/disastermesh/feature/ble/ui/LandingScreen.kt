@@ -1,5 +1,7 @@
 package com.example.disastermesh.feature.ble.ui
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -16,6 +18,7 @@ import androidx.navigation.NavController
 import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.feature.ble.nav.Screen
 
+@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LandingScreen(
@@ -25,10 +28,12 @@ fun LandingScreen(
     val state by vm.connection.collectAsState()
     val ui         by vm.ui.collectAsState()
     val profile  by vm.profile.collectAsState()
+    val nodeId  by vm.nodeId.collectAsState()
 
     /* ------------- greeting line ----------------------------------- */
     val greeting = profile?.let { "Hi ${it.name}!" } ?: "Welcome"
     val uidLine  = profile?.let { "User-ID: ${it.uid}" } ?: ""
+    val nodeLine = "Node-ID: ${nodeId?.toString() ?: "null"}"
 
     val connected = when (state) {
         GattConnectionEvent.ServicesDiscovered -> true
@@ -64,6 +69,8 @@ fun LandingScreen(
             Text(greeting, style = MaterialTheme.typography.headlineSmall)
             if (uidLine.isNotEmpty())
                 Text(uidLine, style = MaterialTheme.typography.labelMedium)
+
+            Text(nodeLine, style = MaterialTheme.typography.labelMedium)
 
             Text(
                 text = "Mode: " + when (ui.mode) {

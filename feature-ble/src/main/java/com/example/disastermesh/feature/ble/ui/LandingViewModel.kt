@@ -1,12 +1,14 @@
 package com.example.disastermesh.feature.ble.ui
 
 import android.content.Context
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.core.ble.GattManager
 import com.example.disastermesh.core.ble.ProfilePrefs
-import com.example.disastermesh.core.ble.encodeUserIdUpdate
+import com.example.disastermesh.core.ble.repository.BleMeshRepository
 import com.example.disastermesh.core.crypto.CryptoBox
 import com.example.disastermesh.core.data.MessageCodec
 import com.example.disastermesh.core.net.ConnectivityObserver
@@ -21,8 +23,9 @@ import javax.inject.Inject
 @HiltViewModel
 class LandingViewModel @Inject constructor(
     private val gatt: GattManager,
-    private val net: ConnectivityObserver,
+    net: ConnectivityObserver,
     private val netRepo: UserNetRepository,
+    meshRepo: BleMeshRepository,
     @ApplicationContext val ctx: Context
 ) : ViewModel() {
 
@@ -33,6 +36,10 @@ class LandingViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val profile = profileFlow
+
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+    val nodeId: StateFlow<Int?> = meshRepo.nodeIdFlow
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private var connectJob: Job? = null
 
@@ -64,6 +71,12 @@ class LandingViewModel @Inject constructor(
                         gatt.sendMessage(
                             MessageCodec.encodeAnnounceKey(p.uid, pk32)
                         )
+                    }
+
+                    profileFlow.value?.let { p ->
+                        runCatching {
+                            gatt.sendMessage(MessageCodec.encodeRequestNodeId(p.uid))
+                        }
                     }
                 }
             }

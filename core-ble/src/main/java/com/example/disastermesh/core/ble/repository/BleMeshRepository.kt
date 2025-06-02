@@ -2,6 +2,7 @@ package com.example.disastermesh.core.ble.repository
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.room.Transaction
 import com.example.disastermesh.core.ble.GattManager
@@ -9,6 +10,8 @@ import com.example.disastermesh.core.ble.MAX_MSG_CHARS
 import com.example.disastermesh.core.ble.idTarget
 import com.example.disastermesh.core.ble.idType
 import com.example.disastermesh.core.ble.makeChatId
+import com.example.disastermesh.core.ble.NodePrefs
+import com.example.disastermesh.core.ble.ProfilePrefs
 import com.example.disastermesh.core.crypto.CryptoBox
 import com.example.disastermesh.core.data.*
 import com.example.disastermesh.core.database.MessageType
@@ -23,6 +26,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,7 +36,8 @@ class BleMeshRepository @Inject constructor(
     @ApplicationContext private val ctx: Context,
     private val gatt: GattManager,
     private val dao: ChatDao,
-    private val pkDao: PublicKeyDao
+    private val pkDao: PublicKeyDao,
+    private val nodePrefs: NodePrefs,
 ) : MeshRepository {
 
     private val _nodeList = MutableSharedFlow<List<Int>>(replay = 0)
@@ -49,8 +54,19 @@ class BleMeshRepository @Inject constructor(
     private val _routeUpdates = MutableSharedFlow<Pair<Long, Route>>(extraBufferCapacity = 16)
     override val routeUpdates: SharedFlow<Pair<Long, Route>> = _routeUpdates   // VM listens
 
+    private val _nodeIdFlow = MutableStateFlow<Int?>(null)
+    val nodeIdFlow: StateFlow<Int?> = _nodeIdFlow
+    private var oldNodeIdSnapshot: Int? = null
+
 
     init {
+        scope.launch {
+            nodePrefs.lastNodeFlow.collect { persisted ->
+                // Initialize both the in-memory state and our “old snapshot”
+                oldNodeIdSnapshot = persisted
+                _nodeIdFlow.value = persisted
+            }
+        }
         gatt.incomingMessages()
             .mapNotNull { MessageCodec.decode(it) }
             .onEach { obj ->
@@ -66,7 +82,9 @@ class BleMeshRepository @Inject constructor(
                         Opcode.LIST_USERS_RESP -> _userList.emit(obj.ids)
                         else -> {}
                     }
+
                     is EncChatMessage -> handleEnc(obj)
+                    is NodeIdReceived -> handleNodeId(obj.nodeId)
 
                 }
             }
@@ -105,21 +123,23 @@ class BleMeshRepository @Inject constructor(
         val encOn = dao.encryptedFlow(chatId).first() && type == MessageType.USER
         val pktId = (System.currentTimeMillis() and 0xFFFF_FFFFL).toUInt()
 
-        val ok = if (encOn) {
+        val payload = if (encOn) {
             /* lookup keys */
             val theirPk: ByteArray = pkDao.key(target) ?: return
 
             val cipher = CryptoBox.encrypt(ctx, body, myUserId, theirPk)
-            val bytes  = MessageCodec.encodeEncUserMsg(pktId, target, myUserId, cipher)
-            gatt.sendMessage(bytes)
+            MessageCodec.encodeEncUserMsg(pktId, target, myUserId, cipher)
+
         } else {
             val cm = when (type) {
                 MessageType.BROADCAST -> ChatMessage(pktId, type, 0, 0, body)
                 MessageType.NODE -> ChatMessage(pktId, type, target, 0, body)
                 MessageType.USER -> ChatMessage(pktId, type, target, myUserId, body)
             }
-            gatt.sendMessage(MessageCodec.encode(cm))
-        }.let { kotlin.runCatching { it }.isSuccess }
+            MessageCodec.encode(cm)
+        }
+
+        val ok = runCatching { gatt.sendMessage(payload) }.isSuccess
 
         val title = when (type) {
             MessageType.BROADCAST -> "Broadcast"
@@ -199,9 +219,9 @@ class BleMeshRepository @Inject constructor(
     private suspend fun handleEnc(enc: EncChatMessage) {
         /* my private key ↔ sender’s public key */
         println("handleEnc")
-        val myUid     = enc.dest          // because dest = me
+        val myUid = enc.dest          // because dest = me
         val senderUid = enc.sender
-        val senderPk  = pkDao.key(senderUid) ?: return   // cannot decrypt
+        val senderPk = pkDao.key(senderUid) ?: return   // cannot decrypt
 
         val plain = runCatching {
             CryptoBox.decrypt(ctx, enc.cipher, myUid, senderPk)
@@ -209,11 +229,11 @@ class BleMeshRepository @Inject constructor(
         println("decrypted: $plain")
 
         val cm = ChatMessage(
-            pktId  = enc.pktId,
-            type   = MessageType.USER,
-            dest   = myUid,
+            pktId = enc.pktId,
+            type = MessageType.USER,
+            dest = myUid,
             sender = senderUid,
-            body   = plain
+            body = plain
         )
         persist(cm, Route.MESH)           // reuse existing helper
     }
@@ -250,6 +270,34 @@ class BleMeshRepository @Inject constructor(
     }
 
     override suspend fun getRoute(cid: Long): Route? = dao.getRoute(cid)
+
+    private suspend fun handleNodeId(newId: Int) {
+        val oldId = oldNodeIdSnapshot
+        Log.i("MeshRepo", "NODE_ID   old=$oldId  new=$newId")
+
+        if (oldId != null && oldId != newId) {
+            // We know the user was on oldId, now they’re on newId → send USER_MOVED right away
+            val myUid = ProfilePrefs.flow(ctx).first()?.uid
+            if (myUid == null) {
+                Log.w("MeshRepo", "No profile yet – skip USER_MOVED")
+            } else {
+                val moved = MessageCodec.encodeUserMoved(oldId, myUid)
+                Log.i(
+                    "MeshRepo",
+                    "→ USER_MOVED  old=$oldId  uid=$myUid  bytes=${
+                        moved.joinToString { "%02X".format(it) }
+                    }"
+                )
+                runCatching { gatt.sendMessage(moved) }
+            }
+        }
+        // 3) Immediately update in-memory StateFlow so Compose can recompose
+        _nodeIdFlow.value = newId
+        oldNodeIdSnapshot = newId
+
+        // 4) Persist the new node ID for future app launches
+        nodePrefs.set(newId)
+    }
 
 
 }

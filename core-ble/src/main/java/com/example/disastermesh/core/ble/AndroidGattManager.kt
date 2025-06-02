@@ -38,9 +38,8 @@ class AndroidGattManager @Inject constructor(
     private var cccd: BluetoothGattDescriptor? = null        // remember which one we wrote
     private val _events = MutableStateFlow<GattConnectionEvent?>(null)
 
-
     private val incoming = MutableSharedFlow<ByteArray>(
-        replay = 64,               // no single-item replay cache
+        replay = 64,
         extraBufferCapacity = 64,              // hold up to 64 packets
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )

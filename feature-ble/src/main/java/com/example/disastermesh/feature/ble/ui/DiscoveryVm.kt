@@ -1,5 +1,7 @@
 package com.example.disastermesh.feature.ble.ui
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.disastermesh.core.ble.makeChatId
@@ -24,6 +26,7 @@ class DiscoveryVm @Inject constructor(
     /* ------------------------------------------------------------------ */
     /*  ask current node for its list                                     */
     /* ------------------------------------------------------------------ */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     fun query(kind: DiscoveryType) {
         _ids.value = null        // show spinner
         _empty.value = false
@@ -49,6 +52,7 @@ class DiscoveryVm @Inject constructor(
     /* ------------------------------------------------------------------ */
     /*  guarantee a Chat row exists                                       */
     /* ------------------------------------------------------------------ */
+    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     suspend fun ensureChat(type: MessageType, target: Int, title: String) {
         val cid = makeChatId(type, target)
         repo.ensureChatExists(cid, title, type)
