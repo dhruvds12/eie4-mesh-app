@@ -1,8 +1,6 @@
 package com.example.disastermesh.feature.ble.ui
 
 import android.content.Context
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.disastermesh.core.ble.GattConnectionEvent
@@ -37,7 +35,6 @@ class LandingViewModel @Inject constructor(
 
     val profile = profileFlow
 
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     val nodeId: StateFlow<Int?> = meshRepo.nodeIdFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 

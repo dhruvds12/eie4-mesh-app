@@ -1,7 +1,5 @@
 package com.example.disastermesh.feature.ble.ui
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -18,7 +16,6 @@ import androidx.navigation.NavController
 import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.feature.ble.nav.Screen
 
-@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LandingScreen(

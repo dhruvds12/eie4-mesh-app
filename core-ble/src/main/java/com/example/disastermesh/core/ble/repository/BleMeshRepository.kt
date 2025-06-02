@@ -1,9 +1,7 @@
 package com.example.disastermesh.core.ble.repository
 
 import android.content.Context
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.room.Transaction
 import com.example.disastermesh.core.ble.GattManager
 import com.example.disastermesh.core.ble.MAX_MSG_CHARS
@@ -30,7 +28,6 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-@RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
 @Singleton
 class BleMeshRepository @Inject constructor(
     @ApplicationContext private val ctx: Context,
@@ -112,7 +109,6 @@ class BleMeshRepository @Inject constructor(
         dao.setEncrypted(chatId, on)
 
 
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
     @Transaction
     override suspend fun send(chatId: Long, body: String, myUserId: Int) {
         require(body.length <= MAX_MSG_CHARS) {
@@ -215,7 +211,7 @@ class BleMeshRepository @Inject constructor(
 //        dao.insert(Message(chatId = cid, mine = false, body = cm.body))
 //    }
 
-    @RequiresApi(Build.VERSION_CODES.VANILLA_ICE_CREAM)
+
     private suspend fun handleEnc(enc: EncChatMessage) {
         /* my private key ↔ sender’s public key */
         println("handleEnc")
