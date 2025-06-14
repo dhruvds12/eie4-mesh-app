@@ -1,5 +1,6 @@
 package com.example.disastermesh.core.data
 
+import android.util.Log
 import com.example.disastermesh.core.database.MessageType
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -19,7 +20,10 @@ enum class Opcode(val id: Int) {
     ANNOUNCE_KEY(0x0D),     // app → node – my 32 B public key
     BLE_PUBKEY_RESP(0x0F),     // node → app – 32 B public-key of user
     BLE_REQUEST_PUBKEY(0x0E),     // app → node – “give me user X”
-    ENC_USER_MSG      (0x11);     // user↔user ciphertext
+    ENC_USER_MSG(0x11),     // user↔user ciphertext
+    USER_MOVED(0x12),
+    NODE_ID(0x13),
+    REQUEST_NODE_ID(0x14);
 
     companion object {
         fun fromId(i: Int) = entries.firstOrNull { it.id == i }
@@ -33,6 +37,9 @@ data object GatewayAvailable
 data class GatewayChatMessage(     // identical to ChatMessage but flagged
     val inner: ChatMessage
 )
+
+data class NodeIdReceived(val nodeId: Int)
+
 
 /*
 Message types:
@@ -105,6 +112,24 @@ object MessageCodec {
             put(cipher)
         }.array()
 
+    fun encodeUserMoved(oldNodeId: Int, myUid: Int): ByteArray =
+        ByteBuffer.allocate(1 + 4 + 4)        // header only
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .apply {
+                put(Opcode.USER_MOVED.id.toByte())
+                putInt(oldNodeId)    // dest  = where inbox lives
+                putInt(myUid)        // sender = me
+            }.array()
+
+    fun encodeRequestNodeId(myUserId: Int): ByteArray =
+        ByteBuffer.allocate(1 + 4 + 4)
+            .order(ByteOrder.LITTLE_ENDIAN)
+            .apply {
+                put(Opcode.REQUEST_NODE_ID.id.toByte())
+                putInt(0)        // dest = 0 (unused)
+                putInt(myUserId) // sender = our userID
+            }.array()
+
     /* --------------------------- decode -------------------------------- */
 
     fun decode(bytes: ByteArray): Any? = runCatching {
@@ -115,6 +140,7 @@ object MessageCodec {
         when (op) {
 
             Opcode.LIST_NODES_RESP, Opcode.LIST_USERS_RESP -> {
+                Log.d("MeshCodec", "LIST_NODES_RESP, LIST_USERS_RESP")
                 /* skip dest / sender (2 × 4 B) */
                 if (buf.remaining() < 12) return null
                 buf.int; buf.int
@@ -127,12 +153,13 @@ object MessageCodec {
 
             Opcode.ACK_SUCCESS -> {
                 if (buf.remaining() < 4) return null
-                println("Received ACK")
+                Log.d("MeshCodec", "Received ACK")
                 val pid = buf.int.toUInt()
                 AckSuccess(pid)
             }
 
             Opcode.BROADCAST, Opcode.NODE_MSG, Opcode.USER_MSG -> {
+                Log.d("MeshCodec", "BROADCAST, NODE_MSG, USER_MSG")
                 if (buf.remaining() < 12) return null      // pktId + dest + sender
                 val pid = buf.int.toUInt()
                 val dest = buf.int
@@ -153,6 +180,7 @@ object MessageCodec {
             }
 
             Opcode.USER_MSG_GATEWAY -> {
+                Log.d("MeshCodec", "USER_MSG_GATEWAY")
                 if (buf.remaining() < 12) return null
                 val pid = buf.int.toUInt()
                 val dest = buf.int
@@ -172,11 +200,13 @@ object MessageCodec {
 
 
             Opcode.GATEWAY_AVAILABLE -> {
+                Log.i("MeshCodec", "Gateway Available")
                 GatewayAvailable
             }
 
 
-            Opcode.BLE_PUBKEY_RESP -> {             //  ← NEW
+            Opcode.BLE_PUBKEY_RESP -> {             //
+                Log.d("MeshCodec", "BLE_PUBKEY_RESP")
                 if (buf.remaining() < 40) return null   // dest+sender+32 B key
                 val uid = buf.int                      // dest = owner of key
                 buf.int                                // sender (ignored)
@@ -186,14 +216,25 @@ object MessageCodec {
             }
 
             Opcode.ENC_USER_MSG -> {
-                println("ENC_USER_MSG")
+                Log.i("MeshCodec", "ENC_USER_MSG")
                 if (buf.remaining() < 12) return null
-                val pid    = buf.int.toUInt()
-                val dest   = buf.int
+                val pid = buf.int.toUInt()
+                val dest = buf.int
                 val sender = buf.int
-                val rest   = ByteArray(buf.remaining()); buf.get(rest)
+                val rest = ByteArray(buf.remaining()); buf.get(rest)
                 EncChatMessage(pid, dest, sender, rest)
             }
+
+            Opcode.NODE_ID -> {
+                Log.i("MeshCodec", "NODE_ID")
+                if (buf.remaining() < 12) return null      // pktId + dest + sender
+                buf.int              // pkt-id   (ignored)
+                buf.int              // dest     (always 0)
+                val nodeId = buf.int   // sender  = nodeID
+                Log.i("MeshCodec", "NODE_ID frame, id=$nodeId")
+                NodeIdReceived(nodeId)
+            }
+
 
             else -> null
         }

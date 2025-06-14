@@ -24,7 +24,7 @@ class DiscoveryVm @Inject constructor(
     /* ------------------------------------------------------------------ */
     /*  ask current node for its list                                     */
     /* ------------------------------------------------------------------ */
-    fun query(kind: DiscoveryType) {
+      fun query(kind: DiscoveryType) {
         _ids.value = null        // show spinner
         _empty.value = false
 
