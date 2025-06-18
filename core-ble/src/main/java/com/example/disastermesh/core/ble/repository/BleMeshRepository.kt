@@ -131,7 +131,7 @@ class BleMeshRepository @Inject constructor(
             val theirPk: ByteArray = pkDao.key(target) ?: return
 
             val cipher = CryptoBox.encrypt(ctx, body, myUserId, theirPk)
-            MessageCodec.encodeEncUserMsg(pktId, target, myUserId, cipher)
+            MessageCodec.encodeEncUserMsg(pktId, target, myUserId, cipher, reqAck = ackOn)
 
         } else {
             val cm = when (type) {
@@ -140,13 +140,10 @@ class BleMeshRepository @Inject constructor(
                 MessageType.USER -> ChatMessage(pktId, type, target, myUserId, body)
             }
 
-            if (ackOn && type == MessageType.USER) {
-                MessageCodec.encodeUserMsgReqAck(cm)
-            }
-            if (ackOn && type == MessageType.NODE) {
-                MessageCodec.encodeNodeMsgReqAck(cm)
-            } else {
-                MessageCodec.encode(cm)
+            when {
+                ackOn && type == MessageType.USER -> MessageCodec.encodeUserMsgReqAck(cm)
+                ackOn && type == MessageType.NODE -> MessageCodec.encodeNodeMsgReqAck(cm)
+                else                              -> MessageCodec.encode(cm)
             }
         }
         val title = when (type) {
