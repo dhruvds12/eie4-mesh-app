@@ -70,7 +70,7 @@ class BleMeshRepository @Inject constructor(
 
                 when (obj) {
                     is PubKeyResp -> pkDao.upsert(PublicKey(obj.userId, obj.key))
-                    is AckSuccess -> dao.setStatusByPktId(obj.pktId.toInt(), MessageStatus.ACKED)
+                    is AckSuccess -> dao.setStatusByPktId(obj.pktId.toLong(), MessageStatus.ACKED)
                     is GatewayAvailable -> _gw.value = true
                     is GatewayChatMessage -> persist(obj.inner, Route.GATEWAY)
                     is ChatMessage -> persist(obj, Route.MESH)
@@ -134,9 +134,6 @@ class BleMeshRepository @Inject constructor(
             }
             MessageCodec.encode(cm)
         }
-
-        val ok = runCatching { gatt.sendMessage(payload) }.isSuccess
-
         val title = when (type) {
             MessageType.BROADCAST -> "Broadcast"
             MessageType.NODE -> "Node $target"
@@ -150,10 +147,16 @@ class BleMeshRepository @Inject constructor(
                 chatId = chatId,
                 mine = true,
                 body = body,
-                pktId = pktId.toInt(),
+                pktId = pktId.toLong(),
                 status = MessageStatus.SENDING
             )
         )
+
+
+
+        Log.d("Send", "insert mine=true  pktId=$pktId")
+
+        val ok = runCatching { gatt.sendMessage(payload) }.isSuccess
 
         dao.setStatus(msgId, if (ok) MessageStatus.SENT else MessageStatus.SENDING)
 
@@ -171,7 +174,7 @@ class BleMeshRepository @Inject constructor(
                 chatId = chatId,
                 mine = true,
                 body = body,
-                pktId = pktId.toInt(),
+                pktId = pktId.toLong(),
                 status = MessageStatus.SENDING
             )
         )
@@ -236,6 +239,9 @@ class BleMeshRepository @Inject constructor(
 
 
     private suspend fun persist(cm: ChatMessage, newRoute: Route) {
+        Log.d("Persist", "pktId=${cm.pktId}  sign=${cm.pktId.toLong()}")
+        Log.d("Persist", "exists? ${dao.exists(cm.pktId.toLong())}")
+        if (dao.exists(cm.pktId.toLong())) return
         val cid = makeChatId(cm.type, cm.sender)
 
         dao.upsertChat(
@@ -258,7 +264,7 @@ class BleMeshRepository @Inject constructor(
         }
 
 
-        dao.insert(Message(chatId = cid, mine = false, body = cm.body, pktId = cm.pktId.toInt()))
+        dao.insert(Message(chatId = cid, mine = false, body = cm.body, pktId = cm.pktId.toLong()))
     }
 
     override suspend fun setRoute(cid: Long, r: Route) {

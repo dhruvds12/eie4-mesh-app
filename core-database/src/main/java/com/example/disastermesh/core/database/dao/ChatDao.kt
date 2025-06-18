@@ -38,11 +38,14 @@ interface ChatDao {
     suspend fun getRoute(cid: Long): Route?
 
     @Query("UPDATE Message SET status = :s WHERE pktId = :pid")
-    suspend fun setStatusByPktId(pid: Int, s: MessageStatus)
+    suspend fun setStatusByPktId(pid: Long, s: MessageStatus)
 
     @Query("UPDATE Chat SET encrypted = :flag WHERE id = :cid")
     suspend fun setEncrypted(cid: Long, flag: Boolean)
 
     @Query("SELECT encrypted FROM Chat WHERE id = :cid")
     fun encryptedFlow(cid: Long): Flow<Boolean>
+
+    @Query("SELECT 1 FROM Message WHERE pktId = :pid LIMIT 1")
+    suspend fun exists(pid: Long): Boolean
 }

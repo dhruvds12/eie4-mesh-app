@@ -5,6 +5,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.android.identity.cbor.Uint
 
 /**
  * One message inside a chat.
@@ -22,7 +23,7 @@ import androidx.room.PrimaryKey
 )
 data class Message(
     @PrimaryKey(autoGenerate = true) val msgId: Long = 0,
-    val pktId : Int? = null,
+    val pktId : Long? = null,
     val chatId : Long,
     val mine   : Boolean,                  // true = I sent it
     val ts     : Long = System.currentTimeMillis(),
