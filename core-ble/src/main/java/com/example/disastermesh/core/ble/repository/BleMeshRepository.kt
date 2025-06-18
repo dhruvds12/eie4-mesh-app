@@ -71,6 +71,7 @@ class BleMeshRepository @Inject constructor(
                 when (obj) {
                     is PubKeyResp -> pkDao.upsert(PublicKey(obj.userId, obj.key))
                     is AckSuccess -> dao.setStatusByPktId(obj.pktId.toLong(), MessageStatus.ACKED)
+                    is AckFailure -> dao.setStatusByPktId(obj.pktId.toLong(), MessageStatus.FAILED)
                     is GatewayAvailable -> _gw.value = true
                     is GatewayChatMessage -> persist(obj.inner, Route.GATEWAY)
                     is ChatMessage -> persist(obj, Route.MESH)
@@ -108,6 +109,11 @@ class BleMeshRepository @Inject constructor(
     override suspend fun setEncrypted(chatId: Long, on: Boolean) =
         dao.setEncrypted(chatId, on)
 
+    /* ---------- ack flag helpers --------------------------- */
+    override fun ackFlow(chatId: Long) = dao.ackFlow(chatId)
+    override suspend fun setAck(chatId: Long, on: Boolean) =
+        dao.setAck(chatId, on)
+
 
     @Transaction
     override suspend fun send(chatId: Long, body: String, myUserId: Int) {
@@ -117,6 +123,7 @@ class BleMeshRepository @Inject constructor(
         val type = idType(chatId)
         val target = idTarget(chatId)
         val encOn = dao.encryptedFlow(chatId).first() && type == MessageType.USER
+        val ackOn = dao.ackFlow(chatId).first() && type != MessageType.BROADCAST
         val pktId = (System.currentTimeMillis() and 0xFFFF_FFFFL).toUInt()
 
         val payload = if (encOn) {
@@ -132,7 +139,15 @@ class BleMeshRepository @Inject constructor(
                 MessageType.NODE -> ChatMessage(pktId, type, target, 0, body)
                 MessageType.USER -> ChatMessage(pktId, type, target, myUserId, body)
             }
-            MessageCodec.encode(cm)
+
+            if (ackOn && type == MessageType.USER) {
+                MessageCodec.encodeUserMsgReqAck(cm)
+            }
+            if (ackOn && type == MessageType.NODE) {
+                MessageCodec.encodeNodeMsgReqAck(cm)
+            } else {
+                MessageCodec.encode(cm)
+            }
         }
         val title = when (type) {
             MessageType.BROADCAST -> "Broadcast"

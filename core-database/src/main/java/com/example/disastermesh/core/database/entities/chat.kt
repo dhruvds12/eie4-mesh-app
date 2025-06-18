@@ -17,5 +17,6 @@ data class Chat(
     val type : MessageType,
     val title: String,
     val route: Route = Route.MESH,
-    val encrypted: Boolean = false
+    val encrypted: Boolean = false,
+    val ackRequest: Boolean = false
 )

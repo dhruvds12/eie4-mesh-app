@@ -24,6 +24,8 @@ import com.example.disastermesh.feature.ble.ui.MessageBar
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.outlined.Done
+import androidx.compose.material.icons.outlined.DoneAll
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -55,6 +57,11 @@ fun BleChatScreen(
     val isUserChat = remember(chatId) {            // low 8 bits = type
         com.example.disastermesh.core.ble.idType(chatId) ==
                 com.example.disastermesh.core.database.MessageType.USER
+    }
+
+    val isNodeChat = remember(chatId) {            // low 8 bits = type
+        com.example.disastermesh.core.ble.idType(chatId) ==
+                com.example.disastermesh.core.database.MessageType.NODE
     }
 
     val canSend = if (isUserChat) {
@@ -117,6 +124,21 @@ fun BleChatScreen(
                     }
                 )
             }
+
+            if (isUserChat || isNodeChat) {
+                val ackOn by vm.ackRequested.collectAsState()
+                AssistChip(
+                    onClick = { vm.toggleAck(!ackOn) },
+                    label = { Text(if (ackOn) "ACK on" else "ACK off") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = if (ackOn) Icons.Outlined.DoneAll else Icons.Outlined.Done,
+                            contentDescription = null
+                        )
+                    }
+                )
+            }
+
         }
 
         if (showNoKeyDialog) {

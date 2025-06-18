@@ -48,4 +48,11 @@ interface ChatDao {
 
     @Query("SELECT 1 FROM Message WHERE pktId = :pid LIMIT 1")
     suspend fun exists(pid: Long): Boolean
+
+    @Query("UPDATE Chat SET ackRequest = :flag WHERE id = :cid")
+    suspend fun setAck(cid: Long, flag: Boolean)
+
+    @Query("SELECT ackRequest FROM Chat WHERE id = :cid")
+    fun ackFlow(cid: Long): Flow<Boolean>
+
 }

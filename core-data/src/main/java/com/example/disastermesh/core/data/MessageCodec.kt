@@ -23,7 +23,10 @@ enum class Opcode(val id: Int) {
     ENC_USER_MSG(0x11),     // user↔user ciphertext
     USER_MOVED(0x12),
     NODE_ID(0x13),
-    REQUEST_NODE_ID(0x14);
+    REQUEST_NODE_ID(0x14),
+    USER_MSG_REQ_ACK(0x15),     //  phone → node  (user chat, explicit ACK)
+    NODE_MSG_REQ_ACK(0x16),
+    ACK_FAILURE(0x17);
 
     companion object {
         fun fromId(i: Int) = entries.firstOrNull { it.id == i }
@@ -130,6 +133,13 @@ object MessageCodec {
                 putInt(myUserId) // sender = our userID
             }.array()
 
+    fun encodeUserMsgReqAck(pkt: ChatMessage): ByteArray =
+        encode(pkt).also { it[0] = Opcode.USER_MSG_REQ_ACK.id.toByte() }
+
+    fun encodeNodeMsgReqAck(pkt: ChatMessage): ByteArray =
+        encode(pkt).also { it[0] = Opcode.NODE_MSG_REQ_ACK.id.toByte() }
+
+
     /* --------------------------- decode -------------------------------- */
 
     fun decode(bytes: ByteArray): Any? = runCatching {
@@ -156,6 +166,12 @@ object MessageCodec {
                 Log.d("MeshCodec", "Received ACK")
                 val pid = buf.int.toUInt()
                 AckSuccess(pid)
+            }
+
+            Opcode.ACK_FAILURE -> {
+                if (buf.remaining() < 4) return null
+                Log.d("MeshCodec", "Received ACK FAIL")
+                AckFailure(buf.int.toUInt())
             }
 
             Opcode.BROADCAST, Opcode.NODE_MSG, Opcode.USER_MSG -> {

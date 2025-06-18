@@ -22,7 +22,7 @@ interface MeshRepository {
     suspend fun send(chatId: Long, body: String, myUserId: Int)
     suspend fun sendGateway(chatId: Long, body: String, myUserId: Int)
     suspend fun setRoute(cid: Long, r: Route)
-    suspend fun getRoute(cid: Long) : Route?
+    suspend fun getRoute(cid: Long): Route?
 
     /* -------- new key-management API ------------------------------- */
     fun publicKeyFlow(userId: Int): Flow<ByteArray?>
@@ -31,6 +31,10 @@ interface MeshRepository {
     /* -------- per-chat encryption flag ----------------------------- */
     fun encryptedFlow(chatId: Long): Flow<Boolean>
     suspend fun setEncrypted(chatId: Long, on: Boolean)
+
+    /* -------- per-chat ACK flag ----------------------------- */
+    fun ackFlow(chatId: Long): Flow<Boolean>
+    suspend fun setAck(chatId: Long, on: Boolean)
 
 
 }

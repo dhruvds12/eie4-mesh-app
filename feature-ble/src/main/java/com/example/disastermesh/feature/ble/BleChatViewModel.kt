@@ -55,6 +55,15 @@ class BleChatViewModel @Inject constructor(
         }.map { it != null }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    /* ACK toggle */
+    val ackRequested: StateFlow<Boolean> = chatId.filterNotNull()
+        .flatMapLatest { bleRepo.ackFlow(it) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    fun toggleAck(on: Boolean) = viewModelScope.launch {
+        chatId.value?.let { bleRepo.setAck(it, on) }
+    }
+
     /* --------- public helpers ------------------------------------ */
     fun toggleEncryption(on: Boolean, requestIfMissing: () -> Unit) = viewModelScope.launch {
         val cid = chatId.value ?: return@launch

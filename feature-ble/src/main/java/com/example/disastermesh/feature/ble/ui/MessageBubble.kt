@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.DoneAll
+import androidx.compose.material.icons.outlined.Error
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -92,8 +93,11 @@ private fun StatusIcon(s: MessageStatus) {
         MessageStatus.SENDING -> Icons.Outlined.Schedule
         MessageStatus.SENT    -> Icons.Outlined.Done
         MessageStatus.ACKED   -> Icons.Outlined.DoneAll
+        MessageStatus.FAILED -> Icons.Outlined.Error
+
     }
     val tint = when (s) {
+        MessageStatus.FAILED -> MaterialTheme.colorScheme.error
         MessageStatus.ACKED -> MaterialTheme.colorScheme.onPrimary
         else                -> MaterialTheme.colorScheme.onPrimary.copy(alpha = .7f)
     }
