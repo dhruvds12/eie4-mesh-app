@@ -2,13 +2,14 @@ package com.example.disastermesh.feature.ble.ui
 
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
+//import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.Scaffold
@@ -29,21 +30,25 @@ import com.example.disastermesh.feature.ble.nav.Screen
 import com.example.disastermesh.core.database.entities.Chat
 import com.example.disastermesh.feature.ble.ui.model.NewUserChatDialog
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Card
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 
 
 @Composable
 fun ChatListScreen(
     type: String,
-    nav : NavController,
-    vm  : ChatListVm = hiltViewModel()
+    nav: NavController,
+    vm: ChatListVm = hiltViewModel()
 ) {
     /* --- landing VM to know connection state ------------------------ */
     val landingEntry = remember(nav.currentBackStackEntry) {
         nav.getBackStackEntry(Screen.Landing.route)
     }
     val landingVm: LandingViewModel = hiltViewModel(landingEntry)
-    val ui      by landingVm.ui.collectAsState()
-    val scope   = rememberCoroutineScope()
+    val ui by landingVm.ui.collectAsState()
+    val scope = rememberCoroutineScope()
 
     /* --- chats ------------------------------------------------------ */
     val chats by vm.chats(type).collectAsState(emptyList())
@@ -67,7 +72,7 @@ fun ChatListScreen(
     NewUserChatDialog(
         show = showDialog,
         onDismiss = { showDialog = false },
-        onCreate  = { phone ->
+        onCreate = { phone ->
             showDialog = false
             scope.launch { vm.createUserChat(phone) }
         }
@@ -75,13 +80,13 @@ fun ChatListScreen(
 
 
     /* --- FAB logic -------------------------------------------------- */
-    val isUserList     = type == "USER"
-    val canViaBle      = ui.bleConnected
+    val isUserList = type == "USER"
+    val canViaBle = ui.bleConnected
     val canViaInternet = ui.internet && !ui.bleConnected
 
     val fabEnabled = when {
-        isUserList  -> canViaBle || canViaInternet
-        else        -> canViaBle                       // NODE list
+        isUserList -> canViaBle || canViaInternet
+        else -> canViaBle                       // NODE list
     }
 
     val onFabClick: () -> Unit = onFabClick@{
@@ -101,23 +106,63 @@ fun ChatListScreen(
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick  = onFabClick,
+                onClick = onFabClick,
             ) { Icon(Icons.Default.Add, contentDescription = "New chat") }
         }
     ) { pad ->
         LazyColumn(Modifier.padding(pad)) {
-            items(chats, key = Chat::id) { c ->
-                ListItem(
-                    headlineContent = { Text(c.title) },
-                    modifier = Modifier.clickable {
-                        nav.navigate(
-                            Screen.Chat.route
-                                .replace("{chatId}", c.id.toString())
-                                .replace("{title}",  c.title)
+
+            /* ①  Add a descriptive header once */
+            item {
+
+                val nice = if (type == "USER") "user-to-user" else "node-to-node"
+                Text(
+                    "Recent $nice chats",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            vertical = 8.dp, horizontal = 16.dp
                         )
-                    }
                 )
-                HorizontalDivider()
+
+            }
+
+            items(chats, key = Chat::id) { c ->
+//                ListItem(
+//                    headlineContent = { Text(c.title) },
+//                    modifier = Modifier.clickable {
+//                        nav.navigate(
+//                            Screen.Chat.route
+//                                .replace("{chatId}", c.id.toString())
+//                                .replace("{title}", c.title)
+//                        )
+//                    }
+//                )
+
+                Card(
+                    Modifier
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clickable {
+                            nav.navigate(
+                                Screen.Chat.route
+                                    .replace("{chatId}", c.id.toString())
+                                    .replace("{title}", c.title)
+                            )
+                        }
+                ) {
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                c.title,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                }
+//                HorizontalDivider()
             }
         }
     }

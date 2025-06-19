@@ -22,6 +22,10 @@ import com.example.disastermesh.core.database.MessageType
 import com.example.disastermesh.feature.ble.nav.Screen
 import com.example.disastermesh.feature.ble.ui.model.NewUserChatDialog
 import kotlinx.coroutines.launch
+import androidx.compose.material3.Card
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.text.style.TextOverflow
 
 @Composable
 fun DiscoveryScreen(
@@ -32,6 +36,13 @@ fun DiscoveryScreen(
     val scope = rememberCoroutineScope()
 
     var showDialog by remember { mutableStateOf(false) }
+
+    val landingEntry = remember(nav.currentBackStackEntry) {
+        nav.getBackStackEntry(Screen.Landing.route)
+    }
+    val landingVm: LandingViewModel = hiltViewModel(landingEntry)
+    val myUid   by landingVm.profile.collectAsState(null)   // profile?.uid
+    val myNode  by landingVm.nodeId.collectAsState()
 
     NewUserChatDialog(                    // reuse the component
         show = showDialog,
@@ -64,7 +75,10 @@ fun DiscoveryScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
 
-        Text("Known ${type.label}s")
+        Text(
+            "Known ${type.label}s",
+            style = MaterialTheme.typography.titleMedium
+        )
 
         when {
             ids == null && !empty -> {
@@ -77,35 +91,86 @@ fun DiscoveryScreen(
 
             empty -> Text("No ${type.label.lowercase()}s found.")
 
-            else -> LazyColumn {
-                items(ids ?: emptyList(), key = { it }) { id ->
-                    val msgType = if (type == DiscoveryType.NODE)
-                        MessageType.NODE else MessageType.USER
-                    val title   = if (type == DiscoveryType.NODE)
-                        "Node ${id.u32}" else "User ${id.u32}"
+//            else -> LazyColumn {
+//                items(ids ?: emptyList(), key = { it }) { id ->
+//                    val msgType = if (type == DiscoveryType.NODE)
+//                        MessageType.NODE else MessageType.USER
+//                    val title   = if (type == DiscoveryType.NODE)
+//                        "Node ${id.u32}" else "User ${id.u32}"
+//
+//                    Text(
+//                        text = title,
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .clickable {
+//                                scope.launch {
+//                                    /* 1) make sure Chat row exists */
+//                                    vm.ensureChat(msgType, id, title)
+//
+//                                    /* 2) open the chat */
+//                                    val chatId = makeChatId(msgType, id)
+//                                    nav.navigate(
+//                                        Screen.Chat.route
+//                                            .replace("{chatId}", chatId.toString())
+//                                            .replace("{title}",  title)
+//                                    )
+//                                }
+//                            }
+//                            .padding(8.dp)
+//                    )
+//                }
+//            }
+            else -> {
+                /* ① filter ------------------------------ */
+                val visibleIds = (ids ?: emptyList()).filter { id ->
+                    when (type) {
+                        DiscoveryType.USER -> id != (myUid?.uid ?: -1)
+                        DiscoveryType.NODE -> id != (myNode ?: -1)
+                    }
+                }
 
-                    Text(
-                        text = title,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                scope.launch {
-                                    /* 1) make sure Chat row exists */
-                                    vm.ensureChat(msgType, id, title)
+                /* ② empty-after-filter case -------------- */
+                if (visibleIds.isEmpty()) {
+                    Text("No other ${type.label.lowercase()}s found.")
+                } else LazyColumn {
+                    items(visibleIds, key = { it }) { id ->
+                        val msgType = if (type == DiscoveryType.NODE)
+                            MessageType.NODE else MessageType.USER
+                        val title   = if (type == DiscoveryType.NODE)
+                            "Node ${id.u32}" else "User ${id.u32}"
 
-                                    /* 2) open the chat */
-                                    val chatId = makeChatId(msgType, id)
-                                    nav.navigate(
-                                        Screen.Chat.route
-                                            .replace("{chatId}", chatId.toString())
-                                            .replace("{title}",  title)
-                                    )
+                        /* ③ prettier row ------------------ */
+                        Card(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .clickable {
+                                    scope.launch {
+                                        vm.ensureChat(msgType, id, title)
+                                        val chatId = makeChatId(msgType, id)
+                                        nav.navigate(
+                                            Screen.Chat.route
+                                                .replace("{chatId}", chatId.toString())
+                                                .replace("{title}",  title)
+                                        )
+                                    }
                                 }
-                            }
-                            .padding(8.dp)
-                    )
+                        ) {
+                            ListItem(
+                                headlineContent = {
+                                    Text(
+                                        title,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                },
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                    }
                 }
             }
+
         }
 
         if (type == DiscoveryType.USER) {
