@@ -3,9 +3,13 @@ package com.example.disastermesh.core.ble
 import android.Manifest
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
+import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.os.ParcelUuid
 import androidx.annotation.RequiresPermission
+import com.example.disastermesh.core.ble.AndroidGattManager.Companion.MESH_SERVICE_UUID
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlinx.coroutines.channels.awaitClose
@@ -21,15 +25,26 @@ class AndroidBleScanner @Inject constructor(
      * Caller must hold BLUETOOTH_SCAN + BLUETOOTH_CONNECT.
      * Lint will now be happy that we’ve declared them here.
      */
-    @RequiresPermission(allOf = [
-        Manifest.permission.BLUETOOTH_SCAN,
-        Manifest.permission.BLUETOOTH_CONNECT
-    ])
+    @RequiresPermission(
+        allOf = [
+            Manifest.permission.BLUETOOTH_SCAN,
+            Manifest.permission.BLUETOOTH_CONNECT
+        ]
+    )
     override fun startScan(): Flow<BleDevice> = callbackFlow {
         // Get the bluetooth manager and adapter
-        val mgr     = context.getSystemService(BluetoothManager::class.java)
+        val mgr = context.getSystemService(BluetoothManager::class.java)
         val adapter = mgr?.adapter ?: run { close(); return@callbackFlow }
         val scanner = adapter.bluetoothLeScanner ?: run { close(); return@callbackFlow }
+
+        val filter = ScanFilter.Builder()
+            .setServiceUuid(ParcelUuid(MESH_SERVICE_UUID))
+            .build()
+
+        /* Mild settings: no duplicates, low-power */
+        val settings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
+            .build()
 
         // Override the callback methods for custom scanning logic
         // Callback that sends data to the flow
@@ -39,9 +54,9 @@ class AndroidBleScanner @Inject constructor(
                 // emits a new bleDevice down the flow without blocking
                 trySend(
                     BleDevice(
-                        name    = result.device.name,
+                        name = result.device.name,
                         address = result.device.address,
-                        rssi    = result.rssi
+                        rssi = result.rssi
                     )
                 )
             }
@@ -57,7 +72,8 @@ class AndroidBleScanner @Inject constructor(
         }
 
         // Starts the scanner with the callback
-        scanner.startScan(cb)
+//        scanner.startScan(cb)
+        scanner.startScan(listOf(filter), settings, cb)
         // waits for downstream collector to cancel. Then runs cleanup.
         awaitClose { scanner.stopScan(cb) }
     }

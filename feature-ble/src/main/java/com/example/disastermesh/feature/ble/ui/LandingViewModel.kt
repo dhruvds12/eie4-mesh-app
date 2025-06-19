@@ -83,6 +83,8 @@ class LandingViewModel @Inject constructor(
 
     fun disconnect() {
         gatt.disconnect()
+        connectJob?.cancel()     // stop collecting the *old* flow
+        connectJob = null
     }
 
     // --------------- NET -------------------------
