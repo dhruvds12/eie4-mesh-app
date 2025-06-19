@@ -15,6 +15,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.disastermesh.core.ble.GattConnectionEvent
 import com.example.disastermesh.feature.ble.nav.Screen
+import com.example.disastermesh.core.data.u32
+import com.example.disastermesh.core.data.low32u
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,8 +31,8 @@ fun LandingScreen(
 
     /* ------------- greeting line ----------------------------------- */
     val greeting = profile?.let { "Hi ${it.name}!" } ?: "Welcome"
-    val uidLine  = profile?.let { "User-ID: ${it.uid}" } ?: ""
-    val nodeLine = "Node-ID: ${nodeId?.toString() ?: "null"}"
+    val uidLine  = profile?.let { "User-ID: ${it.uid.u32}" } ?: ""
+    val nodeLine = "Node-ID: ${nodeId?.u32 ?: "null"}"
 
     val connected = when (state) {
         GattConnectionEvent.ServicesDiscovered -> true

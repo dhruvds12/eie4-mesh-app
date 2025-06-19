@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.disastermesh.core.ble.makeChatId          // ← NEW
+import com.example.disastermesh.core.data.u32
 import com.example.disastermesh.core.database.MessageType
 import com.example.disastermesh.feature.ble.nav.Screen
 import com.example.disastermesh.feature.ble.ui.model.NewUserChatDialog
@@ -42,11 +43,11 @@ fun DiscoveryScreen(
                 val cid   = makeChatId(
                     MessageType.USER, uid
                 )
-                vm.ensureChat(MessageType.USER, uid, "User $uid")
+                vm.ensureChat(MessageType.USER, uid, "User ${uid.u32}")
                 nav.navigate(
                     Screen.Chat.route
                         .replace("{chatId}", cid.toString())
-                        .replace("{title}",  "User $uid")
+                        .replace("{title}",  "User ${uid.u32}")
                 )
             }
         }
@@ -81,7 +82,7 @@ fun DiscoveryScreen(
                     val msgType = if (type == DiscoveryType.NODE)
                         MessageType.NODE else MessageType.USER
                     val title   = if (type == DiscoveryType.NODE)
-                        "Node $id" else "User $id"
+                        "Node ${id.u32}" else "User ${id.u32}"
 
                     Text(
                         text = title,

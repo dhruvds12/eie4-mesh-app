@@ -26,7 +26,10 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.DoneAll
-
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -75,8 +78,9 @@ fun BleChatScreen(
 
     var draft by remember { mutableStateOf("") }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        val encrypted by vm.encrypted.collectAsState()
+
+    Column(Modifier.fillMaxSize() .padding(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 4.dp)) {
+//        val encrypted by vm.encrypted.collectAsState()
         val hasKey    by remember {                       // flows only valid for USER chats
             derivedStateOf { vm.encrypted.value || !isUserChat }
         }
@@ -85,59 +89,150 @@ fun BleChatScreen(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            Text(chatTitle, style = MaterialTheme.typography.titleMedium)
 
-            val route by vm.currentRoute.collectAsState()
-            val gwAvail by remember { vm.bleRepo.gatewayAvailable}.collectAsState()
-
-            if (isUserChat && gwAvail) {   // && gwAvail
-                var expanded by remember { mutableStateOf(false) }
-                Box {
-                    AssistChip(
-                        onClick = { expanded = true },
-                        label   = { Text(if (route == Route.MESH) "Mesh" else "Gateway") }
-                    )
-                    DropdownMenu(expanded, { expanded = false }) {
-                        DropdownMenuItem(text = { Text("Mesh") },
-                            onClick = { expanded = false; vm.setRoute(Route.MESH) })
-                        DropdownMenuItem(text = { Text("Gateway") },
-                            onClick = { expanded = false; vm.setRoute(Route.GATEWAY) })
-                    }
-                }
-            }
-
-            if (isUserChat) {
-                AssistChip(
-                    onClick = {
-                        vm.toggleEncryption(!encrypted) {
-                            showNoKeyDialog = true        // callback if key missing
-                        }
-                    },
-                    label = { Text(if (encrypted) "Encrypted" else "Encrypt") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = if (encrypted) Icons.Default.Lock else Icons.Default.LockOpen,
-                            contentDescription = null
-                        )
-                    }
+            IconButton(
+                onClick = { navController.navigateUp() },
+                modifier = Modifier.size(40.dp),            // 40 dp keeps ≥48 dp *tap area*
+//                contentPadding = PaddingValues(0.dp)        // remove the default 12 dp padding
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back"
                 )
             }
+            Spacer(Modifier.width(4.dp))
+            Text(chatTitle, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.width(8.dp))
+//            val route by vm.currentRoute.collectAsState()
+//            val gwAvail by remember { vm.bleRepo.gatewayAvailable}.collectAsState()
 
-            if (isUserChat || isNodeChat) {
+            if (isUserChat) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)                               // <- take the rest
+                        .horizontalScroll(rememberScrollState()), // <- enable scroll
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment   = Alignment.CenterVertically
+                ) {
+
+                    /* ----- Route chip --------------------------------------- */
+                    val route   by vm.currentRoute.collectAsState()
+                    val gwAvail by remember { vm.bleRepo.gatewayAvailable }
+                        .collectAsState()
+
+                    if (gwAvail) {
+                        var expanded by remember { mutableStateOf(false) }
+                        Box {
+                            AssistChip(
+                                onClick = { expanded = true },
+                                label   = { Text(if (route == Route.MESH) "Mesh" else "Gateway") }
+                            )
+                            DropdownMenu(expanded, { expanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Mesh") },
+                                    onClick = { expanded = false; vm.setRoute(Route.MESH) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Gateway") },
+                                    onClick = { expanded = false; vm.setRoute(Route.GATEWAY) }
+                                )
+                            }
+                        }
+                    }
+
+                    /* ----- Encryption chip ---------------------------------- */
+                    val encrypted by vm.encrypted.collectAsState()
+                    AssistChip(
+                        onClick = {
+                            vm.toggleEncryption(!encrypted) { showNoKeyDialog = true }
+                        },
+                        label = { Text(if (encrypted) "Encrypted" else "Encrypt") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (encrypted) Icons.Default.Lock
+                                else Icons.Default.LockOpen,
+                                contentDescription = null
+                            )
+                        }
+                    )
+
+                    /* ----- ACK chip ----------------------------------------- */
+                    val ackOn by vm.ackRequested.collectAsState()
+                    AssistChip(
+                        onClick = { vm.toggleAck(!ackOn) },
+                        label = { Text(if (ackOn) "ACK on" else "ACK off") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = if (ackOn) Icons.Outlined.DoneAll
+                                else Icons.Outlined.Done,
+                                contentDescription = null
+                            )
+                        }
+                    )
+                }
+            }  else if (isNodeChat) {
                 val ackOn by vm.ackRequested.collectAsState()
                 AssistChip(
                     onClick = { vm.toggleAck(!ackOn) },
                     label = { Text(if (ackOn) "ACK on" else "ACK off") },
                     leadingIcon = {
                         Icon(
-                            imageVector = if (ackOn) Icons.Outlined.DoneAll else Icons.Outlined.Done,
+                            imageVector = if (ackOn) Icons.Outlined.DoneAll
+                            else Icons.Outlined.Done,
                             contentDescription = null
                         )
                     }
                 )
             }
+
+//            if (isUserChat && gwAvail) {   // && gwAvail
+//                var expanded by remember { mutableStateOf(false) }
+//                Box {
+//                    AssistChip(
+//                        onClick = { expanded = true },
+//                        label   = { Text(if (route == Route.MESH) "Mesh" else "Gateway") }
+//                    )
+//                    DropdownMenu(expanded, { expanded = false }) {
+//                        DropdownMenuItem(text = { Text("Mesh") },
+//                            onClick = { expanded = false; vm.setRoute(Route.MESH) })
+//                        DropdownMenuItem(text = { Text("Gateway") },
+//                            onClick = { expanded = false; vm.setRoute(Route.GATEWAY) })
+//                    }
+//                }
+//            }
+//
+//            if (isUserChat) {
+//                AssistChip(
+//                    onClick = {
+//                        vm.toggleEncryption(!encrypted) {
+//                            showNoKeyDialog = true        // callback if key missing
+//                        }
+//                    },
+//                    label = { Text(if (encrypted) "Encrypted" else "Encrypt") },
+//                    leadingIcon = {
+//                        Icon(
+//                            imageVector = if (encrypted) Icons.Default.Lock else Icons.Default.LockOpen,
+//                            contentDescription = null
+//                        )
+//                    }
+//                )
+//            }
+
+//            if (isUserChat || isNodeChat) {
+//                val ackOn by vm.ackRequested.collectAsState()
+//                AssistChip(
+//                    onClick = { vm.toggleAck(!ackOn) },
+//                    label = { Text(if (ackOn) "ACK on" else "ACK off") },
+//                    leadingIcon = {
+//                        Icon(
+//                            imageVector = if (ackOn) Icons.Outlined.DoneAll else Icons.Outlined.Done,
+//                            contentDescription = null
+//                        )
+//                    }
+//                )
+//            }
 
         }
 

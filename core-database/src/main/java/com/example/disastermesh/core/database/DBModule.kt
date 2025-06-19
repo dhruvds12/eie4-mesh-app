@@ -18,7 +18,8 @@ object DbModule {
     @Provides @Singleton
     fun provideDb(@ApplicationContext ctx: Context): MeshDb =
         Room.databaseBuilder(ctx, MeshDb::class.java, "mesh.db")
-            .fallbackToDestructiveMigration(false)     // dev-time convenience
+//            .fallbackToDestructiveMigration(false)     // dev-time convenience
+            .addMigrations(MIGRATION_7_8)
             .build()
 
     @Provides

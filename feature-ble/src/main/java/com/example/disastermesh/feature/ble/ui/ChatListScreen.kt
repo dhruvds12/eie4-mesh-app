@@ -24,6 +24,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.disastermesh.core.data.low32u
 import com.example.disastermesh.feature.ble.nav.Screen
 import com.example.disastermesh.core.database.entities.Chat
 import com.example.disastermesh.feature.ble.ui.model.NewUserChatDialog
@@ -53,7 +54,7 @@ fun ChatListScreen(
             nav.navigate(
                 Screen.Chat.route
                     .replace("{chatId}", cid.toString())
-                    .replace("{title}", "User ${(cid and 0xFFFF_FFFF).toInt()}")
+                    .replace("{title}", "User ${cid.low32u}")
             )
         }
     }

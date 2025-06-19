@@ -11,7 +11,7 @@ import com.example.disastermesh.core.database.entities.PublicKey
 
 @Database(
     entities = [Chat::class, Message::class, PublicKey::class],
-    version  = 7,
+    version  = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
