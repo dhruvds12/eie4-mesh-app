@@ -55,4 +55,9 @@ interface ChatDao {
     @Query("SELECT ackRequest FROM Chat WHERE id = :cid")
     fun ackFlow(cid: Long): Flow<Boolean>
 
+    @Query("UPDATE Chat SET title = :newTitle WHERE id = :cid")
+    suspend fun renameChat(cid: Long, newTitle: String)
+
+    @Query("SELECT title FROM Chat WHERE id = :cid LIMIT 1")
+    fun titleFlow(cid: Long): Flow<String>
 }

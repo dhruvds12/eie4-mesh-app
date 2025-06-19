@@ -26,11 +26,12 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.outlined.Done
 import androidx.compose.material.icons.outlined.DoneAll
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.runtime.saveable.rememberSaveable
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -80,11 +81,35 @@ fun BleChatScreen(
 
     var draft by remember { mutableStateOf("") }
 
+    var showRename by remember { mutableStateOf(false) }
+    var titleDraft by rememberSaveable { mutableStateOf(chatTitle) }
+
+    val currentTitle by vm.title.collectAsState()
+
+    /*  ── connection context ───────────────────────────────────────── */
+    val internetOnly = uiState.internet && !uiState.bleConnected
+    val route by vm.currentRoute.collectAsState()
+
+    /* Disable chips if ① we have no BLE link (internetOnly) OR
+       ② the user selected Gateway routing.                           */
+    val disableCryptoAck = internetOnly || route == Route.GATEWAY
+
+    val encrypted by vm.encrypted.collectAsState()
+    val ackOn by vm.ackRequested.collectAsState()
+
+    LaunchedEffect(disableCryptoAck, encrypted) {
+        if (disableCryptoAck && encrypted) vm.toggleEncryption(false) {}
+    }
+    LaunchedEffect(disableCryptoAck, ackOn) {
+        if (disableCryptoAck && ackOn) vm.toggleAck(false)
+    }
 
 
-    Column(Modifier
-        .fillMaxSize()
-        .padding(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 4.dp)) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 4.dp)
+    ) {
 //        val encrypted by vm.encrypted.collectAsState()
         val hasKey by remember {                       // flows only valid for USER chats
             derivedStateOf { vm.encrypted.value || !isUserChat }
@@ -103,13 +128,25 @@ fun BleChatScreen(
 //                contentPadding = PaddingValues(0.dp)        // remove the default 12 dp padding
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
                     contentDescription = "Back"
                 )
             }
-            Spacer(Modifier.width(4.dp))
-            Text(chatTitle, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.width(8.dp))
+//            Spacer(Modifier.width(4.dp))
+//            Text(chatTitle, style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(currentTitle, style = MaterialTheme.typography.titleMedium)
+                IconButton(
+                    onClick = {           // preload draft from *current* title
+                        titleDraft = currentTitle
+                        showRename = true
+                    }
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "Rename chat")
+                }
+            }
+//            Spacer(Modifier.width(4.dp))
+
 //            val route by vm.currentRoute.collectAsState()
 //            val gwAvail by remember { vm.bleRepo.gatewayAvailable}.collectAsState()
 
@@ -123,7 +160,7 @@ fun BleChatScreen(
                 ) {
 
                     /* ----- Route chip --------------------------------------- */
-                    val route by vm.currentRoute.collectAsState()
+//                    val route by vm.currentRoute.collectAsState()
                     val gwAvail by remember { vm.bleRepo.gatewayAvailable }
                         .collectAsState()
 
@@ -148,8 +185,9 @@ fun BleChatScreen(
                     }
 
                     /* ----- Encryption chip ---------------------------------- */
-                    val encrypted by vm.encrypted.collectAsState()
+//                    val encrypted by vm.encrypted.collectAsState()
                     AssistChip(
+                        enabled = !disableCryptoAck,
                         onClick = {
                             vm.toggleEncryption(!encrypted) { showNoKeyDialog = true }
                         },
@@ -164,8 +202,9 @@ fun BleChatScreen(
                     )
 
                     /* ----- ACK chip ----------------------------------------- */
-                    val ackOn by vm.ackRequested.collectAsState()
+//                    val ackOn by vm.ackRequested.collectAsState()
                     AssistChip(
+                        enabled = !disableCryptoAck,
                         onClick = { vm.toggleAck(!ackOn) },
                         label = { Text(if (ackOn) "ACK on" else "ACK off") },
                         leadingIcon = {
@@ -178,8 +217,9 @@ fun BleChatScreen(
                     )
                 }
             } else if (isNodeChat) {
-                val ackOn by vm.ackRequested.collectAsState()
+//                val ackOn by vm.ackRequested.collectAsState()
                 AssistChip(
+                    enabled = !disableCryptoAck,
                     onClick = { vm.toggleAck(!ackOn) },
                     label = { Text(if (ackOn) "ACK on" else "ACK off") },
                     leadingIcon = {
@@ -262,6 +302,53 @@ fun BleChatScreen(
                 }
             )
         }
+
+        if (showRename) {
+            AlertDialog(
+                onDismissRequest = { showRename = false },
+
+                confirmButton = {
+                    TextButton(
+                        enabled = titleDraft.isNotBlank(),
+                        onClick = {
+                            vm.renameChat(titleDraft.trim())
+                            showRename = false
+                        }
+                    ) { Text("Save") }
+                },
+                dismissButton = {
+                    Row {
+                        TextButton(onClick = {
+                            vm.resetTitle()
+                            showRename = false
+                        }) { Text("Reset") }
+                        Spacer(Modifier.width(8.dp))
+                        TextButton(onClick = { showRename = false }) { Text("Cancel") }
+                    }
+                },
+
+                title = { Text("Rename chat") },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = titleDraft,
+                            onValueChange = { titleDraft = it },
+                            singleLine = true,
+                            label = { Text("Display name") }
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            if (isUserChat)
+                                "User-ID: ${(chatId and 0xFFFF_FFFF).toInt()}"
+                            else if (isNodeChat)
+                                "Node-ID: ${(chatId and 0xFFFF_FFFF).toInt()}"
+                            else ""
+                        )
+                    }
+                }
+            )
+        }
+
 
         val listState = rememberLazyListState()
 

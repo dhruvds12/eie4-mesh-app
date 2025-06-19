@@ -4,9 +4,11 @@ package com.example.disastermesh.feature.ble.ui
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -30,9 +32,12 @@ import com.example.disastermesh.core.database.entities.Chat
 import com.example.disastermesh.feature.ble.ui.model.NewUserChatDialog
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Card
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Row
 
 
 @Composable
@@ -111,20 +116,31 @@ fun ChatListScreen(
     ) { pad ->
         LazyColumn(Modifier.padding(pad)) {
 
-            /* ①  Add a descriptive header once */
-            item {
 
-                val nice = if (type == "USER") "user-to-user" else "node-to-node"
-                Text(
-                    "Recent $nice chats",
-                    style = MaterialTheme.typography.titleMedium,
+            item {
+                val title = if (type == "USER") "user-to-user" else "node-to-node"
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(
-                            vertical = 8.dp, horizontal = 16.dp
+                        .padding(vertical = 8.dp, horizontal = 8.dp)
+                ) {
+                    IconButton(
+                        onClick = { nav.navigateUp() },
+                        modifier = Modifier.size(40.dp)            // keeps ≥48 dp touch-target
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBackIos,
+                            contentDescription = "Back"
                         )
-                )
-
+                    }
+                    Text(
+                        "Recent $title chats",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
             }
 
             items(chats, key = Chat::id) { c ->

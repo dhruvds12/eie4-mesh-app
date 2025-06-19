@@ -313,5 +313,9 @@ class BleMeshRepository @Inject constructor(
         nodePrefs.set(newId)
     }
 
+    override suspend fun renameChat(cid: Long, newTitle: String) =
+        dao.renameChat(cid, newTitle)
 
+
+    override fun titleFlow(cid: Long) = dao.titleFlow(cid)
 }

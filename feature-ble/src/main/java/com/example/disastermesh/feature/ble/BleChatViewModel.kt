@@ -43,12 +43,20 @@ class BleChatViewModel @Inject constructor(
         cid?.let { if (idType(it) == MessageType.USER)  (it and 0xFFFF_FFFFL).toInt() else null }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val title: StateFlow<String> =
+        chatId.filterNotNull()
+            .flatMapLatest { bleRepo.titleFlow(it) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, "")
+
     /* --------- encryption flag ----------------------------------- */
+    @OptIn(ExperimentalCoroutinesApi::class)
     val encrypted: StateFlow<Boolean> = chatId.filterNotNull()
         .flatMapLatest { bleRepo.encryptedFlow(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /* whether we ALREADY have the remote user’s key */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val hasKeyFlow: StateFlow<Boolean> =
         targetUidFlow.flatMapLatest { uid ->
             uid?.let { bleRepo.publicKeyFlow(it) } ?: flowOf(null)
@@ -56,6 +64,7 @@ class BleChatViewModel @Inject constructor(
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /* ACK toggle */
+    @OptIn(ExperimentalCoroutinesApi::class)
     val ackRequested: StateFlow<Boolean> = chatId.filterNotNull()
         .flatMapLatest { bleRepo.ackFlow(it) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -153,6 +162,21 @@ class BleChatViewModel @Inject constructor(
                 bleRepo.send(cid, text, myUid)
             }
         }
+    }
+
+    /* -------- title helpers ----------------------------------------------------- */
+    fun renameChat(newTitle: String) = viewModelScope.launch {
+        chatId.value?.let { bleRepo.renameChat(it, newTitle) }
+    }
+
+    fun resetTitle() = viewModelScope.launch {
+        val cid = chatId.value ?: return@launch
+        val def = when (idType(cid)) {
+            MessageType.BROADCAST -> "Broadcast"
+            MessageType.NODE      -> "Node ${(cid and 0xFFFF_FFFF).toInt()}"
+            MessageType.USER      -> "User ${(cid and 0xFFFF_FFFF).toInt()}"
+        }
+        bleRepo.renameChat(cid, def)
     }
 
 }

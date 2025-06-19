@@ -36,5 +36,8 @@ interface MeshRepository {
     fun ackFlow(chatId: Long): Flow<Boolean>
     suspend fun setAck(chatId: Long, on: Boolean)
 
+    suspend fun renameChat(cid: Long, newTitle: String)
+    fun titleFlow(cid: Long): Flow<String>
+
 
 }
