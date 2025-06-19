@@ -29,15 +29,16 @@ import androidx.compose.material.icons.outlined.DoneAll
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun BleChatScreen(
-    chatId    : Long,
-    chatTitle : String,
+    chatId: Long,
+    chatTitle: String,
     navController: NavController,
-    vm : BleChatViewModel = hiltViewModel()
+    vm: BleChatViewModel = hiltViewModel()
 ) {
     /* make VM switch to this chat */
     LaunchedEffect(chatId) { vm.setChat(chatId) }
@@ -47,13 +48,14 @@ fun BleChatScreen(
         navController.getBackStackEntry(Screen.Landing.route)
     }
     val landingVm: LandingViewModel = hiltViewModel(landingEntry)
-    val bleEvt     by landingVm.connection.collectAsState()
-    val uiState    by landingVm.ui.collectAsState()
+    val bleEvt by landingVm.connection.collectAsState()
+    val uiState by landingVm.ui.collectAsState()
 
     val bleReady = when (bleEvt) {
         GattConnectionEvent.ServicesDiscovered,
         is GattConnectionEvent.WriteCompleted,
         is GattConnectionEvent.CharacteristicRead -> true
+
         else -> false
     }
 
@@ -79,9 +81,12 @@ fun BleChatScreen(
     var draft by remember { mutableStateOf("") }
 
 
-    Column(Modifier.fillMaxSize() .padding(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 4.dp)) {
+
+    Column(Modifier
+        .fillMaxSize()
+        .padding(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 4.dp)) {
 //        val encrypted by vm.encrypted.collectAsState()
-        val hasKey    by remember {                       // flows only valid for USER chats
+        val hasKey by remember {                       // flows only valid for USER chats
             derivedStateOf { vm.encrypted.value || !isUserChat }
         }
 
@@ -114,11 +119,11 @@ fun BleChatScreen(
                         .weight(1f)                               // <- take the rest
                         .horizontalScroll(rememberScrollState()), // <- enable scroll
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment   = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
 
                     /* ----- Route chip --------------------------------------- */
-                    val route   by vm.currentRoute.collectAsState()
+                    val route by vm.currentRoute.collectAsState()
                     val gwAvail by remember { vm.bleRepo.gatewayAvailable }
                         .collectAsState()
 
@@ -127,7 +132,7 @@ fun BleChatScreen(
                         Box {
                             AssistChip(
                                 onClick = { expanded = true },
-                                label   = { Text(if (route == Route.MESH) "Mesh" else "Gateway") }
+                                label = { Text(if (route == Route.MESH) "Mesh" else "Gateway") }
                             )
                             DropdownMenu(expanded, { expanded = false }) {
                                 DropdownMenuItem(
@@ -172,7 +177,7 @@ fun BleChatScreen(
                         }
                     )
                 }
-            }  else if (isNodeChat) {
+            } else if (isNodeChat) {
                 val ackOn by vm.ackRequested.collectAsState()
                 AssistChip(
                     onClick = { vm.toggleAck(!ackOn) },
@@ -248,15 +253,22 @@ fun BleChatScreen(
                 dismissButton = {
                     TextButton(onClick = { showNoKeyDialog = false }) { Text("Cancel") }
                 },
-                title   = { Text("Public key not available") },
-                text    = { Text("The chat will remain un-encrypted until the key " +
-                        "is retrieved from the mesh. Continue?") }
+                title = { Text("Public key not available") },
+                text = {
+                    Text(
+                        "The chat will remain un-encrypted until the key " +
+                                "is retrieved from the mesh. Continue?"
+                    )
+                }
             )
         }
+
+        val listState = rememberLazyListState()
 
         LazyColumn(
             Modifier.weight(1f),
             contentPadding = PaddingValues(vertical = 8.dp),
+            state = listState,
             reverseLayout = false
         ) {
             items(items, key = {
@@ -272,15 +284,19 @@ fun BleChatScreen(
             }
         }
 
+        LaunchedEffect(items.size) {
+            if (items.isNotEmpty()) listState.scrollToItem(items.lastIndex)
+        }
+
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             MessageBar(
-                text        = draft,
-                onTextChange= { draft = it },
-                onSend      = { vm.send(draft); draft = "" },
-                enabled     = canSend
+                text = draft,
+                onTextChange = { draft = it },
+                onSend = { vm.send(draft); draft = "" },
+                enabled = canSend
             )
 
         }
