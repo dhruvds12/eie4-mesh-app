@@ -47,17 +47,26 @@ class AndroidGattManager @Inject constructor(
     private data class Pending(val bytes: ByteArray, val ack: CompletableDeferred<Unit>)
 
     // TODO: Unlimited size queue will negatively impact RAM usage if there is a high volume of messages
-    private val outQ = Channel<Pending>(Channel.UNLIMITED)
+    private var outQ = Channel<Pending>(Channel.UNLIMITED)
 
     /** launched when the first connect() succeeds, cancelled on disconnect() */
     private var writerJob: Job? = null
     private var currentAck: CompletableDeferred<Unit>? = null
+
+    private var connectFlowScope: Job? = null
 
     /* --------------------------------------------------------------------- */
     /*  connection                                                           */
     /* --------------------------------------------------------------------- */
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun connect(address: String): Flow<GattConnectionEvent> = callbackFlow {
+
+        /*  If we were still connected or mid-flow from a previous session,
+    shut everything down before starting a new one.               */
+        connectFlowScope?.cancel()           // cancel previous collector if any
+        cleanup()                            // helper → closes gatt, jobs, channels
+        connectFlowScope = this.launch { /* keeps reference so we can cancel later */ }
+
         val device = ctx.getSystemService(BluetoothManager::class.java)
             ?.adapter?.getRemoteDevice(address)
             ?: run { trySend(GattConnectionEvent.Error("Device not found")); close(); return@callbackFlow }
@@ -194,21 +203,20 @@ class AndroidGattManager @Inject constructor(
             }
         }
 
-        awaitClose {
-            writerJob?.cancel()
-            outQ.close()
-            gatt?.disconnect(); gatt?.close()
-            gatt = null; rxChar = null; cccd = null
-        }
+//        awaitClose {
+//            writerJob?.cancel()
+//            outQ.close()
+//            gatt?.disconnect(); gatt?.close()
+//            gatt = null; rxChar = null; cccd = null
+//        }
+        awaitClose { cleanup() }
     }
 
     /* --------------------------------------------------------------------- */
     /*  disconnect / send / flows                          */
     /* --------------------------------------------------------------------- */
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
-    override fun disconnect() {
-        gatt?.disconnect()
-    }
+    override fun disconnect() = cleanup()
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private suspend fun writeBlocking(bytes: ByteArray) {
@@ -229,6 +237,32 @@ class AndroidGattManager @Inject constructor(
             g.writeCharacteristic(tx)
         }
         if (!ok) throw IOException("writeCharacteristic busy / failed")
+    }
+
+    @Synchronized                         // avoid races between connect / disconnect
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    private fun cleanup() {
+        writerJob?.cancel(); writerJob = null
+        outQ.close()                      // drop pending writes
+        outQ = Channel(Channel.UNLIMITED)
+        currentAck?.completeExceptionally(IOException("Disconnected")); currentAck = null
+
+        gatt?.apply {                     // close politely
+            try {
+                disconnect()
+            } catch (_: Exception) {
+            }
+            try {
+                close()
+            } catch (_: Exception) {
+            }
+        }
+        gatt = null
+        rxChar = null
+        cccd = null
+
+        // Emit a final Disconnected event so UI state resets immediately
+        _events.value = GattConnectionEvent.Disconnected
     }
 
     @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)

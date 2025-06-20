@@ -2,6 +2,7 @@ package com.example.disastermesh.feature.ble.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.disastermesh.core.data.u32
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
@@ -29,7 +30,7 @@ class ChatListVm @Inject constructor(
             com.example.disastermesh.core.database.entities.Chat(
                 id = cid,
                 type = com.example.disastermesh.core.database.MessageType.USER,
-                title = "User $uid"
+                title = "User ${uid.u32}"
             )
         )
         _newChat.emit(cid)                      // notify UI
